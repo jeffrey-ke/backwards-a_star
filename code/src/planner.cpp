@@ -1,10 +1,8 @@
-/*=================================================================
- *
- * planner.cpp
- *
- *=================================================================*/
 #include "../include/planner.h"
 #include <math.h>
+#include <algorithm>
+#include <vector>
+#include <queue>
 
 #define GETMAPINDEX(X, Y, XSIZE, YSIZE) ((Y-1)*XSIZE + (X-1))
 
@@ -16,8 +14,11 @@
 #define	MIN(A, B)	((A) < (B) ? (A) : (B))
 #endif
 
-#define NUMOFDIRS 8
+#if !defined(SUCC)
+#define SUCC
+#endif
 
+#define NUMOFDIRS 8
 void planner(
     int* map,
     int collision_thresh,
@@ -31,46 +32,37 @@ void planner(
     int targetposeY,
     int curr_time,
     int* action_ptr
-    )
-{
-    // 8-connected grid
-    int dX[NUMOFDIRS] = {-1, -1, -1,  0,  0,  1, 1, 1};
-    int dY[NUMOFDIRS] = {-1,  0,  1, -1,  1, -1, 0, 1};
-    
-    // for now greedily move towards the final target position,
-    // but this is where you can put your planner
+    ) {
+    /*
+     * todo:
+     * implement StateXYT
+     * how will I implement succ
+     * don't forget to implement operator== and operator!=
+     * parse goals helper with namespace helper::
+     * multigoal_create
+     * backtrack
+     * parse action_ptr
+     * how will state transitions work? How do I calculate the cost between state transitions?
+     *  it's very possible I can update the open set with the current times.
+     * What are my g values? What are my h values?
+     * clearly my g values are the time and distance it will take to get to the target
+     * will my g values be time elapsed?
+     */
+    std::priority_queue<
+        StateXYT, 
+        std::vector<StateXYT>, 
+        std::greater<StateXYT>
+    > open;
 
-    int goalposeX = target_traj[target_steps-1];
-    int goalposeY = target_traj[target_steps-1+target_steps];
-    // printf("robot: %d %d;\n", robotposeX, robotposeY);
-    // printf("goal: %d %d;\n", goalposeX, goalposeY);
+    const StateXYT start{robotposeX, robotposeY, curr_time};
+    const std::vector<StateXYT>& goals = helper::parse_goals(target_traj, target_poseX, targetposeY, curr_time);
+    const StateXYT& imaginary_goal = helper::multigoal_create(goals);
 
-    int bestX = 0, bestY = 0; // robot will not move if greedy action leads to collision
-    double olddisttotarget = (double)sqrt(((robotposeX-goalposeX)*(robotposeX-goalposeX) + (robotposeY-goalposeY)*(robotposeY-goalposeY)));
-    double disttotarget;
-    for(int dir = 0; dir < NUMOFDIRS; dir++)
-    {
-        int newx = robotposeX + dX[dir];
-        int newy = robotposeY + dY[dir];
-
-        if (newx >= 1 && newx <= x_size && newy >= 1 && newy <= y_size)
-        {
-            if ((map[GETMAPINDEX(newx,newy,x_size,y_size)] >= 0) && (map[GETMAPINDEX(newx,newy,x_size,y_size)] < collision_thresh))  //if free
-            {
-                disttotarget = (double)sqrt(((newx-goalposeX)*(newx-goalposeX) + (newy-goalposeY)*(newy-goalposeY)));
-                if(disttotarget < olddisttotarget)
-                {
-                    olddisttotarget = disttotarget;
-                    bestX = dX[dir];
-                    bestY = dY[dir];
-                }
-            }
-        }
+    do{
+        expanded = open.pop();
+        expand_state(open, expanded);
     }
-    robotposeX = robotposeX + bestX;
-    robotposeY = robotposeY + bestY;
-    action_ptr[0] = robotposeX;
-    action_ptr[1] = robotposeY;
-    
-    return;
+    while (expanded != imaginary_goal);
+    helper::backtrack(expanded, start)
+    *action_ptr = step
 }
