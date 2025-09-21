@@ -1,8 +1,13 @@
-#include "../include/planner.h"
-#include <math.h>
+#include <cmath>
 #include <algorithm>
 #include <vector>
-#include <queue>
+#include <set>
+
+#include <boost/functional/hash.hpp>
+
+#include "../include/planner.h"
+#include "../include/structs.h"
+#include "../include/helper.h"
 
 #define GETMAPINDEX(X, Y, XSIZE, YSIZE) ((Y-1)*XSIZE + (X-1))
 
@@ -14,55 +19,86 @@
 #define	MIN(A, B)	((A) < (B) ? (A) : (B))
 #endif
 
-#if !defined(SUCC)
-#define SUCC
-#endif
-
 #define NUMOFDIRS 8
+using std::size_t;
+using std::set;
+using std::vector;
+using std::unordered_map;
+using gval = size_t;
+
+/*
+ * adjacency list representation of the map
+ */
+
+struct Solution {
+	vector<State> states;
+	const State& operator[] (size_t time) const {
+		if (time > states.size()) {
+			throw std::out_of_range("Time index out of range [" << states.at(0).t << ", " << states.at(states.size() - 1).t << "]");
+		}
+		return states.at(time);
+	}
+	void push_back(const State& s) {
+		states.push_back(s);
+	}
+}
+Solution backtrack(const State& end, const State& start, const Map& map) {
+	const auto& cur = end;
+	Solution soln;
+	while (cur != start) {
+		const auto& preds = map[cur]; // so this needs to return an adj list: a vector of StateCost
+		const auto& next_state = std::min_element(preds.begin(), preds.end(), OpenList::StateLT);
+		// how ought I to include time here?
+		soln.push_back(next_state);
+		cur = next_state;
+	}
+}
+void expand_state(const OpenList& open, const State& state, const set<State>& closed, const Map& map, const Heuristic& heuristic) {
+	using OpenList::StateCost;
+	set<StateCost> sucs_costs = map[state];
+	for (const auto& [state, cost] : sucs_costs) {
+		if (closed.find(state) == closed.end()) {
+			open.insert_update(state, cost, heuristic);
+		}
+	}
+
+}
+std::optional<Solution> soln;
 void planner(
-    int* map,
-    int collision_thresh,
-    int x_size,
-    int y_size,
-    int robotposeX,
-    int robotposeY,
-    int target_steps,
-    int* target_traj,
-    int targetposeX,
-    int targetposeY,
-    int curr_time,
-    int* action_ptr
-    ) {
-    /*
-     * todo:
-     * implement StateXYT
-     * how will I implement succ
-     * don't forget to implement operator== and operator!=
-     * parse goals helper with namespace helper::
-     * multigoal_create
-     * backtrack
-     * parse action_ptr
-     * how will state transitions work? How do I calculate the cost between state transitions?
-     *  it's very possible I can update the open set with the current times.
-     * What are my g values? What are my h values?
-     * clearly my g values are the time and distance it will take to get to the target
-     * will my g values be time elapsed?
+	int* raw_map,
+	int collision_thresh,
+	int x_size,
+	int y_size,
+	int robotposeX,
+	int robotposeY,
+	int target_steps,
+	int* target_traj,
+	int targetposeX,
+	int targetposeY,
+	int curr_time,
+	int* action_ptr
+) 
+{
+	/*
      */
-    std::priority_queue<
-        StateXYT, 
-        std::vector<StateXYT>, 
-        std::greater<StateXYT>
-    > open;
+	if (soln.has_value()) {
+		*action_ptr = soln[curr_time];
+		return;
+	}
+	OpenList open;
+	set<State> closed;
 
-    const StateXYT start{robotposeX, robotposeY, curr_time};
-    const std::vector<StateXYT>& goals = helper::parse_goals(target_traj, target_poseX, targetposeY, curr_time);
-    const StateXYT& imaginary_goal = helper::multigoal_create(goals);
-
-    do{
-        expanded = open.pop();
-        expand_state(open, expanded);
-    }
-    while (expanded != imaginary_goal);
-    helper::backtrack(expanded, start)
-    *action_ptr = step
+	const State start{robotposeX, robotposeY, curr_time};
+	const auto& target = helper::parse_goals(target_traj, target_poseX, targetposeY, curr_time); // returns a set of states and a Target object
+	// to make this imaginary goal an actual to the states
+	// hence the need for an actual map object
+	const Map map = helper::init_map(imaginary_goal, raw_map);
+	do {
+		expanded = open.pop();
+		expand_state(open, expanded, closed, map);
+		closed.push(expanded)
+	}
+	while (expanded != imaginary_goal);
+	soln = backtrack(expanded, start);
+	*action_ptr = soln[curr_time];
 }
