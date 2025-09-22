@@ -3,7 +3,6 @@
 #include "state.h"
 #include "heuristic.h"
 struct OpenList {
-	using g_val = int;
 	struct StateLT {
 		bool operator() (const StateCost& lhs, const StateCost& rhs) const {
 			return lhs.second < rhs.second;
