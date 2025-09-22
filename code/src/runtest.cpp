@@ -97,7 +97,7 @@ int main(int argc, char *argv[])
 
     int target_steps = traj.size();
     int* target_traj = new int[2*target_steps];
-    for (size_t i = 0; i < target_steps; ++i)
+    for (int i = 0; i < target_steps; ++i)
     {
         target_traj[i] = traj[i][0];
         target_traj[i + target_steps] = traj[i][1];
@@ -107,11 +107,11 @@ int main(int argc, char *argv[])
 
     // read map
     int* map = new int[x_size*y_size];
-    for (size_t i=0; i<x_size; i++)
+    for (int i=0; i<x_size; i++)
     {
         std::getline(myfile, line);
         std::stringstream ss(line);
-        for (size_t j=0; j<y_size; j++)
+        for (int j=0; j<y_size; j++)
         {
             double value;
             ss >> value;

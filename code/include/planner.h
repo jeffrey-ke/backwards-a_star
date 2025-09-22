@@ -1,6 +1,16 @@
 #ifndef PLANNER_H
 #define PLANNER_H
 
+#define GETMAPINDEX(X, Y, XSIZE, YSIZE) ((Y-1)*XSIZE + (X-1))
+
+#if !defined(MAX)
+#define	MAX(A, B)	((A) > (B) ? (A) : (B))
+#endif
+
+#if !defined(MIN)
+#define	MIN(A, B)	((A) < (B) ? (A) : (B))
+#endif
+
 // Declare the plan function
 void planner(
     int* map,

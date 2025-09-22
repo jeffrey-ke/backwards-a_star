@@ -1,69 +1,47 @@
-#include <cmath>
 #include <algorithm>
+#include <cassert>
+#include <iterator>
 #include <vector>
 #include <set>
 
 #include <boost/functional/hash.hpp>
 
+#include "../include/map.h"
 #include "../include/planner.h"
-#include "../include/structs.h"
+#include "../include/openlist.h"
+#include "../include/state.h"
+#include "../include/heuristic.h"
 #include "../include/helper.h"
 
-#define GETMAPINDEX(X, Y, XSIZE, YSIZE) ((Y-1)*XSIZE + (X-1))
-
-#if !defined(MAX)
-#define	MAX(A, B)	((A) > (B) ? (A) : (B))
-#endif
-
-#if !defined(MIN)
-#define	MIN(A, B)	((A) < (B) ? (A) : (B))
-#endif
-
 #define NUMOFDIRS 8
-using std::size_t;
 using std::set;
 using std::vector;
-using std::unordered_map;
-using gval = size_t;
 
-/*
- * adjacency list representation of the map
- */
+vector<State> backtrack(const State& end, const State& start, const Map& map) {
+	vector<State> soln;
+	soln.push_back(end);
 
-struct Solution {
-	vector<State> states;
-	const State& operator[] (size_t time) const {
-		if (time > states.size()) {
-			throw std::out_of_range("Time index out of range [" << states.at(0).t << ", " << states.at(states.size() - 1).t << "]");
-		}
-		return states.at(time);
-	}
-	void push_back(const State& s) {
-		states.push_back(s);
-	}
-}
-Solution backtrack(const State& end, const State& start, const Map& map) {
-	const auto& cur = end;
-	Solution soln;
+	auto cur = end;
 	while (cur != start) {
-		const auto& preds = map[cur]; // so this needs to return an adj list: a vector of StateCost
-		const auto& next_state = std::min_element(preds.begin(), preds.end(), OpenList::StateLT);
-		// how ought I to include time here?
+		const vector<StateCost> preds = map[cur]; 
+		auto& [next_state, cost] = (
+			*
+			std::min_element(preds.begin(), preds.end(), OpenList::StateLT())
+		);
 		soln.push_back(next_state);
 		cur = next_state;
 	}
+	return soln;
 }
-void expand_state(const OpenList& open, const State& state, const set<State>& closed, const Map& map, const Heuristic& heuristic) {
-	using OpenList::StateCost;
-	set<StateCost> sucs_costs = map[state];
-	for (const auto& [state, cost] : sucs_costs) {
+void expand_state(OpenList& open, const State& state, const set<State>& closed, const Map& map, const Heuristic& heuristic) {
+	vector<StateCost> sucs_costs = map[state];
+	for (const auto& [state, gval] : sucs_costs) {
 		if (closed.find(state) == closed.end()) {
-			open.insert_update(state, cost, heuristic);
+			open.insert_update(state, gval, heuristic);
 		}
 	}
-
 }
-std::optional<Solution> soln;
+vector<State> soln;
 void planner(
 	int* raw_map,
 	int collision_thresh,
@@ -81,24 +59,32 @@ void planner(
 {
 	/*
      */
-	if (soln.has_value()) {
-		*action_ptr = soln[curr_time];
+	if (curr_time <= soln.size())  {
+		const auto& [x, y, t] = soln[curr_time - 1];
+		action_ptr[0] = x;
+		action_ptr[1] = y;
 		return;
 	}
+	assert(curr_time == 0);
 	OpenList open;
 	set<State> closed;
 
 	const State start{robotposeX, robotposeY, curr_time};
-	const auto& target = helper::parse_goals(target_traj, target_poseX, targetposeY, curr_time); // returns a set of states and a Target object
+	const vector<State> concrete_goals = helper::parse_goals(target_traj, target_steps, targetposeX, targetposeY, curr_time); // returns a set of states and a Target object
 	// to make this imaginary goal an actual to the states
 	// hence the need for an actual map object
-	const Map map = helper::init_map(imaginary_goal, raw_map);
+	const Map map{raw_map, x_size, y_size, collision_thresh, concrete_goals};
+	const DistanceHeuristic heuristic(concrete_goals, map);
+	State expanded{};
 	do {
 		expanded = open.pop();
-		expand_state(open, expanded, closed, map);
-		closed.push(expanded)
+		expand_state(open, expanded, closed, map, heuristic);
+		closed.insert(expanded);
 	}
-	while (expanded != imaginary_goal);
-	soln = backtrack(expanded, start);
-	*action_ptr = soln[curr_time];
+	while (expanded != Map::IMAGINARY_GOAL);
+	soln = backtrack(expanded, start, map);
+	const auto& [next_x, next_y, t] = soln[curr_time - 1];
+	action_ptr[0] = next_x;
+	action_ptr[1] = next_y;
+	return;
 }

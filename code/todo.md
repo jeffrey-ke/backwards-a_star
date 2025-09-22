@@ -1,3 +1,47 @@
+# Completed constructs (due for review)
+- Map: 
+- parse_goals
+- (not needed), parse goals now does this. init map, in helper, so I need to add the imaginary goal, s.t. the map adds as successor one of the imaginary goals to the concrete goals
+- backtrack
+
+# doing now:
+- heuristic
+
+# what planner needs:
+- easy place to get all the aliases (look up the best practices for this)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 conclusions:
 * ARA* with N seconds of computation time (use chrono), with all succ of current

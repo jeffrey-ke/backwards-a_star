@@ -1,5 +1,18 @@
-#include "structs.h" // TODO fixme
+#ifndef helper_h
+#define helper_h
+#include <utility>
+
+#include "state.h"
+
+using Target = std::vector<State>;
 namespace helper {
-std::pair<std::set<State>, State> parse_goals
-	
+Target parse_goals(int* target_traj, int target_steps, int target_poseX, int target_poseY, int curr_time){
+	Target target;
+	target.resize(target_steps);
+	for (int time_step = 0; time_step < target_steps; ++time_step) {
+		target.at(time_step) = State{target_traj[time_step], target_traj[time_step + 1], time_step};
+	}
+	return target;
 }
+};
+#endif
