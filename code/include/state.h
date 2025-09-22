@@ -37,7 +37,7 @@ struct State{
 };
 
 State operator+(const State& lhs, const State& rhs) {
-	return lhs + rhs;
+	return State{lhs.x + rhs.x, lhs.y + rhs.y, lhs.t  + rhs.t};
 };
 
 #endif
