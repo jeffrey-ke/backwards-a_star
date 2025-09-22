@@ -2,25 +2,26 @@
 #define STATE_H
 #include <utility>
 #include <cstddef>
+#include <limits>
 
 #include <boost/heap/fibonacci_heap.hpp>
 #include "boost/functional/hash_fwd.hpp"
 
-using StateCost = std::pair<struct State, int>;
+struct Action {
+	int dx,dy,dt;
+};
 struct State{
 	int x,y,t;
-	State& operator+(const State& rhs) {
-		x += rhs.x;
-		y += rhs.y;
-		t += rhs.t;
-		return *this;
-	};
+	int gval{std::numeric_limits<int>::max()};
 	bool operator==(const State& rhs) const {
 		return (
 		(x == rhs.x) and
 		(y == rhs.y) and
 		(t == rhs.t)
 		);
+	};
+	bool isinf() const {
+		return gval == std::numeric_limits<int>::max();
 	};
 	bool operator!= (const State& rhs) const {
 		return !(*this == rhs);
@@ -36,8 +37,8 @@ struct State{
 	};
 };
 
-State operator+(const State& lhs, const State& rhs) {
-	return State{lhs.x + rhs.x, lhs.y + rhs.y, lhs.t  + rhs.t};
+State operator+(const State& lhs, const Action& rhs) {
+	return State{lhs.x + rhs.dx, lhs.y + rhs.dy, lhs.t  + rhs.dt};
 };
 
 #endif

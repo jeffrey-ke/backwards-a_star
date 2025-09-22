@@ -15,6 +15,7 @@
 #define NUMOFDIRS 8
 using std::unordered_set;
 using std::vector;
+using std::pair;
 
 vector<State> backtrack(const State& end, const State& start, const Map& map) {
 	vector<State> soln;
@@ -22,10 +23,20 @@ vector<State> backtrack(const State& end, const State& start, const Map& map) {
 
 	auto cur = end;
 	while (cur != start) {
-		const vector<StateCost> preds = map[cur]; 
+		const vector<Map::StateCostPair> preds = map[cur]; 
+		auto lt = [] (const Map::StateCostPair& lhs, const Map::StateCostPair& rhs) {
+			const auto& [lstate, lcost] = lhs;
+			const auto& [rstate, rcost] = rhs;
+			if (lstate.isinf() and ! rstate.isinf()) {
+				return false;
+			}
+			elif (! lstate.isinf() and rstate.isinf()) {
+				return true;
+			}
+			return lhs.first.gval + lhs.second < rhs.first.gval + rhs.second;};
 		auto& [next_state, cost] = (
 			*
-			std::min_element(preds.begin(), preds.end(), OpenList::StateLT())
+			std::min_element(preds.begin(), preds.end(), lt))
 		);
 		soln.push_back(next_state);
 		cur = next_state;
