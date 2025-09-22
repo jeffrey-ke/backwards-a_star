@@ -1,8 +1,7 @@
 #include <algorithm>
 #include <cassert>
-#include <iterator>
 #include <vector>
-#include <set>
+#include <unordered_set>
 
 #include <boost/functional/hash.hpp>
 
@@ -14,7 +13,7 @@
 #include "../include/helper.h"
 
 #define NUMOFDIRS 8
-using std::set;
+using std::unordered_set;
 using std::vector;
 
 vector<State> backtrack(const State& end, const State& start, const Map& map) {
@@ -33,7 +32,7 @@ vector<State> backtrack(const State& end, const State& start, const Map& map) {
 	}
 	return soln;
 }
-void expand_state(OpenList& open, const State& state, const set<State>& closed, const Map& map, const Heuristic& heuristic) {
+void expand_state(OpenList& open, const State& state, const unordered_set<State, State::Hasher>& closed, const Map& map, const Heuristic& heuristic) {
 	vector<StateCost> sucs_costs = map[state];
 	for (const auto& [state, gval] : sucs_costs) {
 		if (closed.find(state) == closed.end()) {
@@ -59,7 +58,7 @@ void planner(
 {
 	/*
      */
-	if (curr_time <= soln.size())  {
+	if (soln.size() > 0)  {
 		const auto& [x, y, t] = soln[curr_time - 1];
 		action_ptr[0] = x;
 		action_ptr[1] = y;
@@ -67,14 +66,13 @@ void planner(
 	}
 	assert(curr_time == 0);
 	OpenList open;
-	set<State> closed;
+	unordered_set<State, State::Hasher> closed;
 
 	const State start{robotposeX, robotposeY, curr_time};
-	const vector<State> concrete_goals = helper::parse_goals(target_traj, target_steps, targetposeX, targetposeY, curr_time); // returns a set of states and a Target object
-	// to make this imaginary goal an actual to the states
-	// hence the need for an actual map object
+	const vector<State> concrete_goals = helper::parse_goals(target_traj, target_steps, targetposeX, targetposeY, curr_time);
 	const Map map{raw_map, x_size, y_size, collision_thresh, concrete_goals};
 	const DistanceHeuristic heuristic(concrete_goals, map);
+	open.insert_update(start, 0, heuristic);
 	State expanded{};
 	do {
 		expanded = open.pop();

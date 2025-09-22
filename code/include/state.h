@@ -26,7 +26,7 @@ struct State{
 		return !(*this == rhs);
 	};
 	struct Hasher {
-		int operator() (const State& s) {
+		int operator() (const State& s) const{
 			size_t seed{};
 			boost::hash_combine(seed, s.x);
 			boost::hash_combine(seed, s.y);

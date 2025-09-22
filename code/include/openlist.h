@@ -20,7 +20,7 @@ struct OpenList {
 	boost::heap::stable<false>,
 	boost::heap::compare<StateGT>
 	>;
-	using Index = std::unordered_map<State, Heap::handle_type>;
+	using Index = std::unordered_map<State, Heap::handle_type, State::Hasher>;
 
 	Heap _min_heap;
 	Index _state_handle_index;
