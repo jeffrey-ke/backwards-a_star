@@ -6,6 +6,7 @@
 #include <algorithm>
 
 #include "state.h"
+#include "map.h"
 
 using std::vector;
 struct Heuristic {
