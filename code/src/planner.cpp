@@ -32,13 +32,14 @@ vector<State> backtrack(const State& end, const State& start, const Map& map) {
 	}
 	return soln;
 }
-void expand_state(OpenList& open, const State& state, const unordered_set<State, State::Hasher>& closed, const Map& map, const Heuristic& heuristic) {
+void expand_state(OpenList& open, const State& state, unordered_set<State, State::Hasher>& closed, const Map& map, const Heuristic& heuristic) {
 	vector<StateCost> sucs_costs = map[state];
 	for (const auto& [state, gval] : sucs_costs) {
 		if (closed.find(state) == closed.end()) {
 			open.insert_update(state, gval, heuristic);
 		}
 	}
+	closed.insert(state);
 }
 vector<State> soln;
 void planner(
