@@ -37,7 +37,7 @@ struct State{
 	};
 };
 
-State operator+(const State& lhs, const Action& rhs) {
+inline State operator+(const State& lhs, const Action& rhs) {
 	return State{lhs.x + rhs.dx, lhs.y + rhs.dy, lhs.t  + rhs.dt};
 };
 
