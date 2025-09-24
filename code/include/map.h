@@ -2,10 +2,12 @@
 #define map_h
 #include <algorithm>
 #include <limits>
+#include <unordered_map>
 
 #include "planner.h"
 #include "state.h"
 using std::vector;
+using std::unordered_map;
 struct Map {
 	static const vector<Action> ACTIONS;
 	static const State IMAGINARY_GOAL;
@@ -14,6 +16,8 @@ struct Map {
 	int* _raw;
 	int _x_size, _y_size, _thres;
 	vector<State> _concrete_goals;
+	using gval = int;
+	unordered_map<State, gval, State::Hasher> _state_gval_table;
 
 	Map(int* raw, int x_size, int y_size, int thres, const vector<State>& concrete_goals): 
 		_raw(raw),
@@ -21,8 +25,25 @@ struct Map {
 		_y_size(y_size),
 		_thres(thres),
 		_concrete_goals(concrete_goals) 
-	{};
+	{
+		for (const auto& goal: _concrete_goals) {
+			update_gval(goal, std::numeric_limits<int>::max());
+			assert(get_gval(goal) == std::numeric_limits<int>::max());
+		}
+	};
 
+	void update_gval(const State& state, gval val) {
+		if (auto cur_gval = get_gval(state); val < cur_gval) {
+			_state_gval_table[state] = val;
+		}
+	};
+
+	gval get_gval(const State& state) {
+		if (_state_gval_table.find(state) == _state_gval_table.end()) {
+			_state_gval_table.emplace(state, std::numeric_limits<int>::max());
+		}
+		return _state_gval_table[state];
+	};
 	bool is_valid(const State& s) const {
 		auto index = GETMAPINDEX(s.x, s.y, _x_size, _y_size);
 		return (
@@ -38,19 +59,21 @@ struct Map {
 	const vector<StateCostPair> operator[] (const State& cur) const {
 		vector<StateCostPair> legal_states;
 		if (cur == IMAGINARY_GOAL) {
-			// TODO: this is tricky, because not all
-			// the goals are actually traversable predecessors
-			// of the imaginary goal; the only traversable 
-			// predecessors are the ones that are temporally
-			// adjacent.
+			for (const auto& goal : _concrete_goals) {
+				legal_states.push_back({goal, 0});
+			}
+			return legal_states;
 		}
 
 		for (const auto& action : ACTIONS) {
 			State next_state = cur + action;
 			if (is_valid(next_state)) {
-				auto index = GETMAPINDEX(next_state.x, next_state.y, _x_size, _y_size);
-				auto cost = static_cast<int>(_raw[index]);
-				next_state.gval = cur.gval + cost;
+				auto cur_gval = _state_gval_table[cur];
+				assert(cur_gval < std::numeric_limits<int>::max());
+				auto cost = static_cast<int>(
+					_raw[GETMAPINDEX(next_state.x, next_state.y, _x_size, _y_size)]
+				);
+				update_gval(next_state, cur_gval + cost);
 				legal_states.push_back({next_state, cost});
 			}
 		}
@@ -66,8 +89,8 @@ struct Map {
 		return legal_states;
 	};
 };
-const State Map::IMAGINARY_GOAL{0, 0, 0, std::numeric_limits<int>::max()};
-const vector<Action> Map::ACTIONS = {
+inline const State Map::IMAGINARY_GOAL{0, 0, 0};
+inline const vector<Action> Map::ACTIONS = {
 	Action{-1, -1, 1},
 	Action{-1, 0, 1},
 	Action{-1, 1, 1},

@@ -71,7 +71,7 @@ void planner(
 	/*
      */
 	if (soln.size() > 0)  {
-		const auto& [x, y, t] = soln[curr_time - 1];
+		const auto& [x, y, t, gval] = soln[curr_time - 1];
 		action_ptr[0] = x;
 		action_ptr[1] = y;
 		return;
