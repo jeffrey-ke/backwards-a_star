@@ -58,7 +58,7 @@ struct Map {
 	};
 	using Cost = int;
 	using StateCostPair = std::pair<State, Cost>;
-	const vector<StateCostPair> operator[] (const State& cur) {
+	const vector<StateCostPair> operator[] (const State& cur)  {
 		vector<StateCostPair> legal_states;
 		if (cur == IMAGINARY_GOAL) {
 			for (const auto& goal : _concrete_goals) {

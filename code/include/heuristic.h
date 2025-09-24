@@ -11,7 +11,7 @@
 using std::vector;
 struct Heuristic {
 	// using inheritance
-	virtual int operator() (const State& state, Map &) const = 0;
+	virtual int operator() (const State& state, Map& map) const = 0;
 };
 //
 struct DistanceHeuristic: public Heuristic {
