@@ -3,37 +3,53 @@
 #include "state.h"
 #include "heuristic.h"
 struct OpenList {
-	struct StateLT {
-		bool operator() (const StateCost& lhs, const StateCost& rhs) const {
+	using StateFvalPair = std::pair<State, int>;
+	struct LT {
+		bool operator() (const StateFvalPair& lhs, const StateFvalPair& rhs) const {
 			return lhs.second < rhs.second;
 		}
 	};
 
-	struct StateGT {
-		bool operator() (const StateCost& lhs, const StateCost& rhs) const{
+	struct GT {
+		bool operator() (const StateFvalPair& lhs, const StateFvalPair& rhs) const{
 			return lhs.second > rhs.second;
 		}
 	};
 	using Heap = boost::heap::fibonacci_heap<
-	StateCost,
+	StateFvalPair,
 	boost::heap::stable<false>,
-	boost::heap::compare<StateGT>
+	boost::heap::compare<GT>
 	>;
 	using Index = std::unordered_map<State, Heap::handle_type, State::Hasher>;
 
 	Heap _min_heap;
 	Index _state_handle_index;
 
-	void insert_update(const State& state, int g_val, const Heuristic& h) {
+	/*
+	* param state is the discovered state with noninf gvalue.
+	* It is a successor of a expanded state, found via map[expanded], which returns a
+	* vector of states 
+	* It assumes that the caller has created a new non inf state
+	* from calling ma
+	* /
+	void insert_update(const State& state, const Heuristic& h) {
+		assert(! state.isinf());
+
+		// state is NOT in the openlist, insert it.
 		if (_state_handle_index.find(state) == _state_handle_index.end()) {
 			auto handle = _min_heap.push(
-				StateCost(state, g_val + h(state))
+				StateFvalPair(state, state.gval+ h(state))
 			);
 			_state_handle_index[state] = handle;
 		}
-		else {
+		// state IS in the openlist, update it. OpenList becomes the table of all states and their current gvalues
+		else { 
 			const auto& handle = _state_handle_index[state];
-			_min_heap.update(handle, StateCost{state, g_val + h(state)});
+			const auto& [cur_state, fval] = *handle;
+			if (state.gval < cur_state.gval){
+				assert(state.gval + h(state) < cur_state.gval + h(cur_state));
+				_min_heap.decrease(handle, StateFvalPair{state, g_val + h(state)});
+			}
 		}
 	};
 	State pop() {
