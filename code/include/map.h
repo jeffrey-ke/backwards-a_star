@@ -32,6 +32,9 @@ struct Map {
 		}
 	};
 
+	void set_start(const State& state) {
+		update_gval(state, 0);
+	};
 	void update_gval(const State& state, gval val) {
 		auto state_iter = _state_gval_table.find(state);
 		if (state_iter == _state_gval_table.end()) {
