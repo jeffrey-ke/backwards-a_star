@@ -89,7 +89,6 @@ void planner(
 	do {
 		expanded = open.pop();
 		expand_state(open, expanded, closed, map, heuristic);
-		closed.insert(expanded);
 	}
 	while (expanded != Map::IMAGINARY_GOAL);
 	soln = backtrack(expanded, start, map);
