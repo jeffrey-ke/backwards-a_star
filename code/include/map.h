@@ -33,19 +33,21 @@ struct Map {
 	};
 
 	void update_gval(const State& state, gval val) {
-		if (auto cur_gval = get_gval(state); val < cur_gval) {
+		auto state_iter = _state_gval_table.find(state);
+		if (state_iter == _state_gval_table.end()) {
 			_state_gval_table[state] = val;
+		}
+		else if (const auto& [s, cur_gval] = *state_iter; val < cur_gval) {
+			_state_gval_table.at(s) = val;
 		}
 	};
 
-	gval get_gval(const State& state) {
-		if (_state_gval_table.find(state) == _state_gval_table.end()) {
-			_state_gval_table.emplace(state, std::numeric_limits<int>::max());
-		}
-		return _state_gval_table[state];
+	gval get_gval(const State& state) const {
+		return _state_gval_table.at(state);
 	};
+
 	bool is_valid(const State& s) const {
-		auto index = GETMAPINDEX(s.x, s.y, _x_size, _y_size);
+		const auto index = GETMAPINDEX(s.x, s.y, _x_size, _y_size);
 		return (
 			s.x >= 0 and
 			s.x < _x_size - 1 and
@@ -56,7 +58,7 @@ struct Map {
 	};
 	using Cost = int;
 	using StateCostPair = std::pair<State, Cost>;
-	const vector<StateCostPair> operator[] (const State& cur) const {
+	const vector<StateCostPair> operator[] (const State& cur) {
 		vector<StateCostPair> legal_states;
 		if (cur == IMAGINARY_GOAL) {
 			for (const auto& goal : _concrete_goals) {
@@ -64,11 +66,12 @@ struct Map {
 			}
 			return legal_states;
 		}
+		assert(get_gval(cur) < std::numeric_limits<int>::max());
 
 		for (const auto& action : ACTIONS) {
 			State next_state = cur + action;
 			if (is_valid(next_state)) {
-				auto cur_gval = _state_gval_table[cur];
+				auto cur_gval = get_gval(cur); //of current! not of next state
 				assert(cur_gval < std::numeric_limits<int>::max());
 				auto cost = static_cast<int>(
 					_raw[GETMAPINDEX(next_state.x, next_state.y, _x_size, _y_size)]

@@ -11,20 +11,16 @@
 using std::vector;
 struct Heuristic {
 	// using inheritance
-	virtual int operator() (const State& state) const = 0;
+	virtual int operator() (const State& state, Map &) const = 0;
 };
 //
 struct DistanceHeuristic: public Heuristic {
 
 	const vector<State>& _target;
-	const Map& _map;
 
-	DistanceHeuristic(const vector<State>& target, const Map& map): 
-		_target(target),
-		_map(map) 
-	{};
+	DistanceHeuristic(const vector<State>& target): _target(target){};
 
-	int operator() (const State& state) const override {
+	int operator() (const State& state, Map& map) const override {
 		if (state == Map::IMAGINARY_GOAL) {
 			return 0;
 		}

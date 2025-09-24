@@ -12,16 +12,12 @@ struct Action {
 };
 struct State{
 	int x,y,t;
-	int gval{std::numeric_limits<int>::max()};
 	bool operator==(const State& rhs) const {
 		return (
 		(x == rhs.x) and
 		(y == rhs.y) and
 		(t == rhs.t)
 		);
-	};
-	bool isinf() const {
-		return gval == std::numeric_limits<int>::max();
 	};
 	bool operator!= (const State& rhs) const {
 		return !(*this == rhs);

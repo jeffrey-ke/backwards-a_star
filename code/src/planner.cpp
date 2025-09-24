@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <cassert>
+#include <limits>
 #include <vector>
 #include <unordered_set>
 
@@ -17,37 +18,30 @@ using std::unordered_set;
 using std::vector;
 using std::pair;
 
-vector<State> backtrack(const State& end, const State& start, const Map& map) {
+vector<State> backtrack(const State& end, const State& start, Map& map) {
 	vector<State> soln;
 	soln.push_back(end);
 
 	auto cur = end;
 	while (cur != start) {
-		const vector<Map::StateCostPair> preds = map[cur]; 
-		auto lt = [] (const Map::StateCostPair& lhs, const Map::StateCostPair& rhs) {
-			const auto& [lstate, lcost] = lhs;
-			const auto& [rstate, rcost] = rhs;
-			if (lstate.isinf() and ! rstate.isinf()) {
-				return false;
+		const vector<Map::StateCostPair>& preds = map[cur]; 
+		auto min_cost = std::numeric_limits<int>::max();
+		State next_state;
+		for (const auto& [pred, cost] : preds) {
+			if (auto combined_cost = map.get_gval(pred) + cost; combined_cost < min_cost) {
+				next_state = pred;
 			}
-			elif (! lstate.isinf() and rstate.isinf()) {
-				return true;
-			}
-			return lhs.first.gval + lhs.second < rhs.first.gval + rhs.second;};
-		auto& [next_state, cost] = (
-			*
-			std::min_element(preds.begin(), preds.end(), lt))
-		);
-		soln.push_back(next_state);
+		}
+		soln.push_back(next_state); //copies anyway, don't need to make next_state a copy.
 		cur = next_state;
 	}
 	return soln;
 }
-void expand_state(OpenList& open, const State& state, unordered_set<State, State::Hasher>& closed, const Map& map, const Heuristic& heuristic) {
-	vector<StateCost> sucs_costs = map[state];
-	for (const auto& [state, gval] : sucs_costs) {
+void expand_state(OpenList& open, const State& state, unordered_set<State, State::Hasher>& closed, Map& map, const Heuristic& heuristic) {
+	vector<Map::StateCostPair> sucs_costs = map[state];
+	for (const auto& [state, cost] : sucs_costs) {
 		if (closed.find(state) == closed.end()) {
-			open.insert_update(state, gval, heuristic);
+			open.insert_update(state, heuristic, map);
 		}
 	}
 	closed.insert(state);
@@ -71,7 +65,7 @@ void planner(
 	/*
      */
 	if (soln.size() > 0)  {
-		const auto& [x, y, t, gval] = soln[curr_time - 1];
+		const auto& [x, y, t] = soln[curr_time - 1];
 		action_ptr[0] = x;
 		action_ptr[1] = y;
 		return;
@@ -82,9 +76,9 @@ void planner(
 
 	const State start{robotposeX, robotposeY, curr_time};
 	const vector<State> concrete_goals = helper::parse_goals(target_traj, target_steps, targetposeX, targetposeY, curr_time);
-	const Map map{raw_map, x_size, y_size, collision_thresh, concrete_goals};
+	Map map{raw_map, x_size, y_size, collision_thresh, concrete_goals};
 	const DistanceHeuristic heuristic(concrete_goals, map);
-	open.insert_update(start, 0, heuristic);
+	open.insert_update(start, heuristic, map);
 	State expanded{};
 	do {
 		expanded = open.pop();
