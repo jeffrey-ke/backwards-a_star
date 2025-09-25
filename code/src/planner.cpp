@@ -23,7 +23,7 @@ vector<State> backtrack(const State& end, const State& start, Map& map) {
 
 	auto cur = end;
 	while (cur != start) {
-		const vector<Map::StateCostPair>& preds = map[cur]; 
+		const vector<Map::StateCostPair>& preds = map.backwards(cur); 
 		auto min_cost = Map::BIG_GVAL;
 		State next_state;
 		for (const auto& [pred, cost] : preds) {
@@ -52,7 +52,7 @@ void expand_state(OpenList& open, const State& state, unordered_set<State, State
 	}
 	closed.insert(state);
 }
-vector<State> soln;
+static vector<State> soln;
 void planner(
 	int* raw_map,
 	int collision_thresh,
@@ -84,7 +84,7 @@ void planner(
 	const vector<State> concrete_goals = helper::parse_goals(target_traj, target_steps, targetposeX, targetposeY, curr_time);
 	Map map{raw_map, x_size, y_size, collision_thresh, concrete_goals};
 	map.set_start(start);
-	DistanceHeuristic heuristic(concrete_goals, 20.0);
+	DistanceHeuristic heuristic(concrete_goals, 200.0);
 	open.insert_update(start, heuristic, map);
 	State expanded{};
 	do {
@@ -93,7 +93,8 @@ void planner(
 	}
 	while (expanded != Map::IMAGINARY_GOAL);
 	soln = backtrack(expanded, start, map);
-	const auto& [next_x, next_y, t] = soln[curr_time - 1];
+	std::reverse(soln.begin(), soln.end());
+	const auto& [next_x, next_y, t] = soln[curr_time + 1];
 	action_ptr[0] = next_x;
 	action_ptr[1] = next_y;
 	return;

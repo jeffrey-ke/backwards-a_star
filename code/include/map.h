@@ -1,6 +1,7 @@
 #ifndef map_h
 #define map_h
 #include <algorithm>
+#include <iterator>
 #include <limits>
 #include <unordered_map>
 
@@ -46,7 +47,11 @@ struct Map {
 	};
 
 	gval get_gval(const State& state) const {
-		return _state_gval_table.at(state);
+		if (_state_gval_table.find(state) != _state_gval_table.end())
+			return _state_gval_table.at(state);
+		else {
+			return std::numeric_limits<double>::infinity();
+		}
 	};
 
 	bool is_valid(const State& s) const {
@@ -69,13 +74,11 @@ struct Map {
 			}
 			return legal_states;
 		}
-		assert(get_gval(cur) < std::numeric_limits<double>::max());
 
 		for (const auto& action : ACTIONS) {
 			State next_state = cur + action;
 			if (is_valid(next_state)) {
 				auto cur_gval = get_gval(cur); //of current! not of next state
-				assert(cur_gval < std::numeric_limits<double>::max());
 				auto cost = static_cast<double>(
 					_raw[GETMAPINDEX(next_state.x, next_state.y, _x_size, _y_size)]
 				);
@@ -95,6 +98,39 @@ struct Map {
 		}
 		return legal_states;
 	};
+	const vector<StateCostPair> backwards(const State& s) {
+		vector<StateCostPair> backwards_preds;
+		const vector<Action> actions = {
+			Action{-1, -1, -1},
+			Action{-1, 0, -1},
+			Action{-1, 1, -1},
+			Action{0, -1, -1},
+			Action{0, 0, -1},
+			Action{0, 1, -1},
+			Action{1, -1, -1},
+			Action{1, 0, -1},
+			Action{1, 1, -1},
+		};
+		if (s == IMAGINARY_GOAL) {
+			for (const auto& goal : _concrete_goals) {
+				backwards_preds.push_back({goal, 0});
+			}
+			return backwards_preds;
+		}
+		for (const auto& a : actions) {
+			const auto next_state = s + a;
+			if (is_valid(next_state)) {
+				auto cost = static_cast<double>(
+					_raw[
+					GETMAPINDEX(next_state.x, next_state.y, _x_size, _y_size)
+					]
+				);
+				auto cur_gval = get_gval(next_state); // this MUST exist
+				backwards_preds.push_back({next_state, cost});
+			}
+		}
+		return backwards_preds;
+	}
 };
 inline const State Map::IMAGINARY_GOAL{0, 0, 0};
 inline const vector<Action> Map::ACTIONS = {
