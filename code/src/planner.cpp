@@ -16,7 +16,6 @@
 #define NUMOFDIRS 8
 using std::unordered_set;
 using std::vector;
-using std::pair;
 
 vector<State> backtrack(const State& end, const State& start, Map& map) {
 	vector<State> soln;
