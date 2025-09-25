@@ -41,6 +41,9 @@ vector<State> backtrack(const State& end, const State& start, Map& map) {
 	return soln;
 }
 void expand_state(OpenList& open, const State& state, unordered_set<State, State::Hasher>& closed, Map& map, Heuristic& heuristic) {
+	if (state == Map::IMAGINARY_GOAL) {
+		return;
+	}
 	vector<Map::StateCostPair> sucs_costs = map[state];
 	for (const auto& [s, cost] : sucs_costs) {
 		if (closed.find(s) == closed.end()) {
