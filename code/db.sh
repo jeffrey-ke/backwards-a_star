@@ -4,4 +4,6 @@ if [[ $1 == remake ]]; then
 fi
 cd build
 make
-lldb ./run_test
+if [[ $? -eq 0 ]]; then
+	lldb ./run_test
+fi
