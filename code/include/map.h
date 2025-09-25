@@ -16,7 +16,7 @@ struct Map {
 	int* _raw;
 	int _x_size, _y_size, _thres;
 	vector<State> _concrete_goals;
-	using gval = int;
+	using gval = double;
 	unordered_map<State, gval, State::Hasher> _state_gval_table;
 
 	Map(int* raw, int x_size, int y_size, int thres, const vector<State>& concrete_goals): 
@@ -27,13 +27,13 @@ struct Map {
 		_concrete_goals(concrete_goals) 
 	{
 		for (const auto& goal: _concrete_goals) {
-			update_gval(goal, std::numeric_limits<int>::max());
-			assert(get_gval(goal) == std::numeric_limits<int>::max());
+			update_gval(goal, std::numeric_limits<double>::max());
+			assert(get_gval(goal) == std::numeric_limits<double>::max());
 		}
 	};
 
 	void set_start(const State& state) {
-		update_gval(state, 0);
+		update_gval(state, 0.0);
 	};
 	void update_gval(const State& state, gval val) {
 		auto state_iter = _state_gval_table.find(state);
@@ -59,7 +59,7 @@ struct Map {
 			static_cast<int>(_raw[index]) < _thres
 		);
 	};
-	using Cost = int;
+	using Cost = double;
 	using StateCostPair = std::pair<State, Cost>;
 	const vector<StateCostPair> operator[] (const State& cur)  {
 		vector<StateCostPair> legal_states;
@@ -69,14 +69,14 @@ struct Map {
 			}
 			return legal_states;
 		}
-		assert(get_gval(cur) < std::numeric_limits<int>::max());
+		assert(get_gval(cur) < std::numeric_limits<double>::max());
 
 		for (const auto& action : ACTIONS) {
 			State next_state = cur + action;
 			if (is_valid(next_state)) {
 				auto cur_gval = get_gval(cur); //of current! not of next state
-				assert(cur_gval < std::numeric_limits<int>::max());
-				auto cost = static_cast<int>(
+				assert(cur_gval < std::numeric_limits<double>::max());
+				auto cost = static_cast<double>(
 					_raw[GETMAPINDEX(next_state.x, next_state.y, _x_size, _y_size)]
 				);
 				update_gval(next_state, cur_gval + cost);

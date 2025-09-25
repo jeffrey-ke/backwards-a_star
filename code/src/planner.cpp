@@ -25,7 +25,7 @@ vector<State> backtrack(const State& end, const State& start, Map& map) {
 	auto cur = end;
 	while (cur != start) {
 		const vector<Map::StateCostPair>& preds = map[cur]; 
-		auto min_cost = std::numeric_limits<int>::max();
+		auto min_cost = std::numeric_limits<double>::max();
 		State next_state;
 		for (const auto& [pred, cost] : preds) {
 			if (auto combined_cost = map.get_gval(pred) + cost; combined_cost < min_cost) {
@@ -78,7 +78,7 @@ void planner(
 	const vector<State> concrete_goals = helper::parse_goals(target_traj, target_steps, targetposeX, targetposeY, curr_time);
 	Map map{raw_map, x_size, y_size, collision_thresh, concrete_goals};
 	map.set_start(start);
-	DistanceHeuristic heuristic(concrete_goals);
+	DistanceHeuristic heuristic(concrete_goals, 20.0);
 	open.insert_update(start, heuristic, map);
 	State expanded{};
 	do {

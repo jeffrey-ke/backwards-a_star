@@ -1,13 +1,15 @@
 #ifndef open_h
 #define open_h
-#include "state.h"
-#include "heuristic.h"
 #include <cassert>
 #include <limits>
 #include <unordered_map>
+#include <iostream>
+
+#include "state.h"
+#include "heuristic.h"
 using std::unordered_map;
 struct OpenList {
-	using StateFvalPair = std::pair<State, int>;
+	using StateFvalPair = std::pair<State, double>;
 	struct LT {
 		bool operator() (const StateFvalPair& lhs, const StateFvalPair& rhs) const {
 			return lhs.second < rhs.second;
@@ -38,8 +40,8 @@ struct OpenList {
 	void insert_update(const State& state, Heuristic& h, Map& map) {
 		// state is NOT in the openlist, insert it.
 		if (_state_handle_index.find(state) == _state_handle_index.end()) {
-			int cur_gval = map.get_gval(state);
-			assert(cur_gval != std::numeric_limits<int>::max());
+			double cur_gval = map.get_gval(state);
+			assert(cur_gval != std::numeric_limits<double>::max());
 			auto handle = _min_heap.push(
 				StateFvalPair(state, cur_gval + h(state, map))
 			);
