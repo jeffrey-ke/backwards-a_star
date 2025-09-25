@@ -88,6 +88,7 @@ struct Map {
 		// ah, then add as predecessor to the imaginary goal this
 		// state
 		if (std::find(_concrete_goals.begin(), _concrete_goals.end(), cur) != _concrete_goals.end()) {
+			update_gval(IMAGINARY_GOAL, get_gval(cur));
 			legal_states.push_back(
 				{IMAGINARY_GOAL, 0}
 			);
