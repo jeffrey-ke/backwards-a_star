@@ -39,9 +39,9 @@ vector<State> backtrack(const State& end, const State& start, Map& map) {
 }
 void expand_state(OpenList& open, const State& state, unordered_set<State, State::Hasher>& closed, Map& map, Heuristic& heuristic) {
 	vector<Map::StateCostPair> sucs_costs = map[state];
-	for (const auto& [state, cost] : sucs_costs) {
-		if (closed.find(state) == closed.end()) {
-			open.insert_update(state, heuristic, map);
+	for (const auto& [s, cost] : sucs_costs) {
+		if (closed.find(s) == closed.end()) {
+			open.insert_update(s, heuristic, map);
 		}
 	}
 	closed.insert(state);
