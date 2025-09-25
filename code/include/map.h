@@ -11,6 +11,7 @@ using std::unordered_map;
 struct Map {
 	static const vector<Action> ACTIONS;
 	static const State IMAGINARY_GOAL;
+	static constexpr double BIG_GVAL = std::numeric_limits<double>::infinity();
 
 
 	int* _raw;
@@ -27,8 +28,7 @@ struct Map {
 		_concrete_goals(concrete_goals) 
 	{
 		for (const auto& goal: _concrete_goals) {
-			update_gval(goal, std::numeric_limits<double>::max());
-			assert(get_gval(goal) == std::numeric_limits<double>::max());
+			update_gval(goal, BIG_GVAL);
 		}
 	};
 
@@ -90,7 +90,7 @@ struct Map {
 		if (std::find(_concrete_goals.begin(), _concrete_goals.end(), cur) != _concrete_goals.end()) {
 			update_gval(IMAGINARY_GOAL, get_gval(cur));
 			legal_states.push_back(
-				{IMAGINARY_GOAL, 0}
+				{IMAGINARY_GOAL, 1}
 			);
 		}
 		return legal_states;

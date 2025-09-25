@@ -24,10 +24,14 @@ vector<State> backtrack(const State& end, const State& start, Map& map) {
 	auto cur = end;
 	while (cur != start) {
 		const vector<Map::StateCostPair>& preds = map[cur]; 
-		auto min_cost = std::numeric_limits<double>::max();
+		auto min_cost = Map::BIG_GVAL;
 		State next_state;
 		for (const auto& [pred, cost] : preds) {
-			if (auto combined_cost = map.get_gval(pred) + cost; combined_cost < min_cost) {
+			auto cur_gval = map.get_gval(pred);
+			if (
+				(cur_gval + cost < min_cost) 
+			){
+				min_cost = cur_gval + cost;
 				next_state = pred;
 			}
 		}
