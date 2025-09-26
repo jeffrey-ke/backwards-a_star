@@ -4,7 +4,6 @@
 #include <cstddef>
 #include <limits>
 
-#include <boost/heap/fibonacci_heap.hpp>
 #include "boost/functional/hash_fwd.hpp"
 
 struct Action {
