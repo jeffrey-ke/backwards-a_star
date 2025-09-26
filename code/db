@@ -1,9 +1,29 @@
 #/usr/bin/env bash
-if [[ $1 == remake ]]; then
-	cmake .
-fi
 cd build
-make
-if [[ $? -eq 0 ]]; then
-	lldb ./run_test
+if [[ $1 == d ]]; then
+	cmake .. -DCMAKE_BUILD_TYPE=Debug
+elif [[ $1 == p ]]; then
+	cmake .. -DCMAKE_BUILD_TYPE=Release
 fi
+
+if make; then
+	success=1
+else
+	success=0
+fi
+
+if (( success == 0 )); then
+	echo "Make failed!"
+	return
+fi
+
+if [[ $1 == d ]]; then
+	lldb ./run_test
+elif [[ $1 == p ]]; then
+	if [[ $# -lt 2 ]]; then
+		echo "Provide a map!"
+	else
+		./run_test $2
+	fi
+fi
+
