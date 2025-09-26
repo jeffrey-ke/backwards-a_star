@@ -1,8 +1,8 @@
 #include <algorithm>
 #include <cassert>
-#include <limits>
 #include <vector>
 #include <unordered_set>
+#include <stack>
 
 #include <boost/functional/hash.hpp>
 
@@ -16,10 +16,10 @@
 #define NUMOFDIRS 8
 using std::unordered_set;
 using std::vector;
+using std::stack;
 
-vector<State> backtrack(const State& end, const State& start, Map& map) {
-	vector<State> soln;
-	soln.push_back(end);
+stack<State> backtrack(const State& end, const State& start, Map& map) {
+	stack<State> soln;
 
 	auto cur = end;
 	while (cur != start) {
@@ -34,7 +34,7 @@ vector<State> backtrack(const State& end, const State& start, Map& map) {
 				next_state = pred;
 			}
 		}
-		soln.push_back(next_state); //copies anyway, don't need to make next_state a copy.
+		soln.push(next_state); //copies anyway, don't need to make next_state a copy.
 		cur = next_state;
 	}
 	return soln;
@@ -43,7 +43,7 @@ void expand_state(OpenList& open, const State& state, unordered_set<State, State
 	if (state == Map::IMAGINARY_GOAL) {
 		return;
 	}
-	vector<Map::StateGvalPair> sucs_costs = map[state];
+	const auto& sucs_costs = map[state];
 	for (const auto& [s, gval] : sucs_costs) {
 		if (closed.find(s) == closed.end()) {
 			open.insert_update(s, gval, heuristic);
@@ -51,7 +51,7 @@ void expand_state(OpenList& open, const State& state, unordered_set<State, State
 	}
 	closed.insert(state);
 }
-static vector<State> soln;
+static stack<State> soln;
 void planner(
 	int* raw_map,
 	int collision_thresh,
@@ -70,7 +70,8 @@ void planner(
 	/*
      */
 	if (soln.size() > 0)  {
-		const auto& [x, y, t] = soln[curr_time - 1];
+		const auto& [x, y, t] = soln.top();
+		soln.pop();
 		action_ptr[0] = x;
 		action_ptr[1] = y;
 		return;
@@ -92,8 +93,8 @@ void planner(
 	}
 	while (expanded != Map::IMAGINARY_GOAL);
 	soln = backtrack(expanded, start, map);
-	std::reverse(soln.begin(), soln.end());
-	const auto& [next_x, next_y, t] = soln[curr_time + 1];
+	const auto& [next_x, next_y, t] = soln.top();
+	soln.pop();
 	action_ptr[0] = next_x;
 	action_ptr[1] = next_y;
 	return;
