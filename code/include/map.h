@@ -4,11 +4,14 @@
 #include <iterator>
 #include <limits>
 #include <unordered_map>
+#include <unordered_set>
 
 #include "planner.h"
 #include "state.h"
 using std::vector;
 using std::unordered_map;
+using std::unordered_set;
+
 struct Map {
 	static const vector<Action> ACTIONS;
 	static const State IMAGINARY_GOAL;
@@ -17,7 +20,7 @@ struct Map {
 
 	int* _raw;
 	int _x_size, _y_size, _thres;
-	vector<State> _concrete_goals;
+	unordered_set<State, State::Hasher> _concrete_goals;
 	using gval = double;
 	unordered_map<State, gval, State::Hasher> _state_gval_table;
 
@@ -25,11 +28,12 @@ struct Map {
 		_raw(raw),
 		_x_size(x_size),
 		_y_size(y_size),
-		_thres(thres),
-		_concrete_goals(concrete_goals) 
+		_thres(thres)
 	{
-		for (const auto& goal: _concrete_goals) {
+		for (const auto& goal: concrete_goals) {
 			update_gval(goal, BIG_GVAL);
+			_concrete_goals.insert(goal);
+
 		}
 	};
 
@@ -46,7 +50,7 @@ struct Map {
 		}
 	};
 
-	gval get_gval(const State& state) const {
+	const gval get_gval(const State& state) const {
 		if (_state_gval_table.find(state) != _state_gval_table.end())
 			return _state_gval_table.at(state);
 		else {
@@ -64,17 +68,10 @@ struct Map {
 			static_cast<int>(_raw[index]) < _thres
 		);
 	};
-	using Cost = double;
-	using StateCostPair = std::pair<State, Cost>;
-	const vector<StateCostPair> operator[] (const State& cur)  {
-		vector<StateCostPair> legal_states;
-		if (cur == IMAGINARY_GOAL) {
-			for (const auto& goal : _concrete_goals) {
-				legal_states.push_back({goal, 0});
-			}
-			return legal_states;
-		}
-
+	using Gval = double;
+	using StateGvalPair = std::pair<State, Gval>;
+	const vector<StateGvalPair> operator[] (const State& cur)  {
+		vector<StateGvalPair> legal_states;
 		for (const auto& action : ACTIONS) {
 			State next_state = cur + action;
 			if (is_valid(next_state)) {
@@ -83,23 +80,20 @@ struct Map {
 					_raw[GETMAPINDEX(next_state.x, next_state.y, _x_size, _y_size)]
 				);
 				update_gval(next_state, cur_gval + cost);
-				legal_states.push_back({next_state, cost});
+				legal_states.push_back({next_state, cur_gval + cost});
 			}
 		}
-		// If the expanded state is one of the concrete goals,
-		// then add the imaginary goal to the successors 
-		// ah, then add as predecessor to the imaginary goal this
-		// state
-		if (std::find(_concrete_goals.begin(), _concrete_goals.end(), cur) != _concrete_goals.end()) {
-			update_gval(IMAGINARY_GOAL, get_gval(cur));
+		if (_concrete_goals.find(cur) != _concrete_goals.end()) {
+			auto cur_gval = get_gval(cur);
+			update_gval(IMAGINARY_GOAL, cur_gval + 1);
 			legal_states.push_back(
-				{IMAGINARY_GOAL, 1}
+				{IMAGINARY_GOAL, cur_gval + 1}
 			);
 		}
 		return legal_states;
 	};
-	const vector<StateCostPair> backwards(const State& s) {
-		vector<StateCostPair> backwards_preds;
+	const vector<StateGvalPair> backwards(const State& s) {
+		vector<StateGvalPair> backwards_preds;
 		const vector<Action> actions = {
 			Action{-1, -1, -1},
 			Action{-1, 0, -1},
@@ -113,7 +107,8 @@ struct Map {
 		};
 		if (s == IMAGINARY_GOAL) {
 			for (const auto& goal : _concrete_goals) {
-				backwards_preds.push_back({goal, 0});
+				auto goal_gval = get_gval(goal);
+				backwards_preds.push_back({goal, goal_gval});
 			}
 			return backwards_preds;
 		}
@@ -125,8 +120,8 @@ struct Map {
 					GETMAPINDEX(next_state.x, next_state.y, _x_size, _y_size)
 					]
 				);
-				auto cur_gval = get_gval(next_state); // this MUST exist
-				backwards_preds.push_back({next_state, cost});
+				auto next_gval = get_gval(next_state); // this MUST exist
+				backwards_preds.push_back({next_state, next_gval + cost});
 			}
 		}
 		return backwards_preds;
