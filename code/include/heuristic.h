@@ -48,7 +48,7 @@ struct OctileHeuristic: public Heuristic {
 		}
 		const auto& [cur_x, cur_y, cur_t] = state;
 		int index = std::min<int>(cur_t + _look_ahead, _target.size() - 1);
-		const auto& [tar_x, tar_y, tar_t] = _target.at(cur_t);  //is it guaranteed that _target will be at least steps long? return std::sqrt(
+		const auto& [tar_x, tar_y, tar_t] = _target.at(index);  //is it guaranteed that _target will be at least steps long? return std::sqrt(
 		double dx = std::abs(cur_x - tar_x);
 		double dy = std::abs(cur_y - tar_y);
 		return _weight * (
