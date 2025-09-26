@@ -37,13 +37,12 @@ struct OpenList {
 	* It assumes that the caller has created a new non inf state
 	* from calling ma
 	*/
-	void insert_update(const State& state, Heuristic& h, Map& map) {
+	void insert_update(const State& state, double gval, Heuristic& h) {
 		// state is NOT in the openlist, insert it.
+		const auto hval = h(state);
 		if (_state_handle_index.find(state) == _state_handle_index.end()) {
-			double cur_gval = map.get_gval(state);
-			assert(cur_gval != std::numeric_limits<double>::max());
 			auto handle = _min_heap.push(
-				StateFvalPair(state, cur_gval + h(state, map))
+				StateFvalPair(state, gval + hval)
 			);
 			_state_handle_index[state] = handle;
 		}
@@ -51,8 +50,9 @@ struct OpenList {
 		else { 
 			const auto& handle = _state_handle_index[state];
 			const auto& [cur_state, fval] = *handle;
-			assert(h(cur_state, map) == h(state, map)); // this very much needs to be true
-			_min_heap.update(handle, StateFvalPair{state, map.get_gval(state) + h(state, map)});
+			if (gval + hval < fval) {
+				_min_heap.decrease(handle, StateFvalPair{state, gval + hval});
+			}
 		}
 	};
 	State pop() {
