@@ -11,7 +11,7 @@
 using std::vector;
 struct Heuristic {
 	// using inheritance
-	virtual double operator() (const State& state, Map& map) const = 0;
+	virtual double operator() (const State& state) const = 0;
 };
 //
 struct DistanceHeuristic: public Heuristic {
@@ -21,7 +21,7 @@ struct DistanceHeuristic: public Heuristic {
 
 	DistanceHeuristic(const vector<State>& target, double weight): _target(target), _weight(weight){};
 
-	double operator() (const State& state, Map& map) const override {
+	double operator() (const State& state) const override {
 		if (state == Map::IMAGINARY_GOAL) {
 			return 0;
 		}
