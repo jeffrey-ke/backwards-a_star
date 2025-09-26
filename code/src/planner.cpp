@@ -23,15 +23,14 @@ vector<State> backtrack(const State& end, const State& start, Map& map) {
 
 	auto cur = end;
 	while (cur != start) {
-		const vector<Map::StateCostPair>& preds = map.backwards(cur); 
-		auto min_cost = Map::BIG_GVAL;
+		const vector<Map::StateGvalPair>& preds = map.backwards(cur); 
+		auto min_gval = Map::BIG_GVAL;
 		State next_state;
-		for (const auto& [pred, cost] : preds) {
-			auto cur_gval = map.get_gval(pred);
+		for (const auto& [pred, gval] : preds) {
 			if (
-				(cur_gval + cost < min_cost) 
+				(gval < min_gval) 
 			){
-				min_cost = cur_gval + cost;
+				min_gval = gval;
 				next_state = pred;
 			}
 		}
@@ -44,10 +43,10 @@ void expand_state(OpenList& open, const State& state, unordered_set<State, State
 	if (state == Map::IMAGINARY_GOAL) {
 		return;
 	}
-	vector<Map::StateCostPair> sucs_costs = map[state];
-	for (const auto& [s, cost] : sucs_costs) {
+	vector<Map::StateGvalPair> sucs_costs = map[state];
+	for (const auto& [s, gval] : sucs_costs) {
 		if (closed.find(s) == closed.end()) {
-			open.insert_update(s, heuristic, map);
+			open.insert_update(s, gval, heuristic);
 		}
 	}
 	closed.insert(state);
@@ -84,8 +83,8 @@ void planner(
 	const vector<State> concrete_goals = helper::parse_goals(target_traj, target_steps, targetposeX, targetposeY, curr_time);
 	Map map{raw_map, x_size, y_size, collision_thresh, concrete_goals};
 	map.set_start(start);
-	DistanceHeuristic heuristic(concrete_goals, 200.0);
-	open.insert_update(start, heuristic, map);
+	OctileHeuristic heuristic(concrete_goals, 20000.0, 600);
+	open.insert_update(start, 0.0, heuristic);
 	State expanded{};
 	do {
 		expanded = open.pop();
