@@ -5,6 +5,8 @@
 #include <unordered_map>
 #include <iostream>
 
+#include <boost/heap/fibonacci_heap.hpp>
+
 #include "state.h"
 #include "heuristic.h"
 using std::unordered_map;
