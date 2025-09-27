@@ -44,6 +44,8 @@ void expand_state(OpenList& open, const State& state, unordered_set<State, State
 		return;
 	}
 	const auto& sucs_costs = map[state];
+	auto iter = closed.find(state);
+	auto end = closed.end();
 	for (const auto& [s, gval] : sucs_costs) {
 		if (closed.find(s) == closed.end()) {
 			open.insert_update(s, gval, heuristic);
@@ -67,8 +69,6 @@ void planner(
 	int* action_ptr
 ) 
 {
-	/*
-     */
 	if (soln.size() > 0)  {
 		const auto& [x, y, t] = soln.top();
 		soln.pop();
@@ -84,14 +84,15 @@ void planner(
 	const vector<State> concrete_goals = helper::parse_goals(target_traj, target_steps, targetposeX, targetposeY, curr_time);
 	Map map{raw_map, x_size, y_size, collision_thresh, concrete_goals};
 	map.set_start(start);
-	OctileHeuristic octile(concrete_goals, 20000.0, 900);
-	WallHeuristic wall(map, 90000);
-	WeightedCombinationHeuristic heuristic(octile, wall, 1, 1);
+	OctileHeuristic octile(concrete_goals, 9000000.0, 900);
+	WallHeuristic wall(map, 8000);
+	RepulsionHeuristic repulse(start, 9000000);
+	WeightedCombinationHeuristic heuristic(octile, wall, repulse, 1, 1, 1);
 
 	open.insert_update(start, 0.0, heuristic);
 	State expanded{};
 	do {
-		expanded = open.pop();
+		expanded = open.pop(closed);
 		expand_state(open, expanded, closed, map, heuristic);
 	}
 	while (expanded != Map::IMAGINARY_GOAL);
