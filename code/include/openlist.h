@@ -7,7 +7,6 @@
 #include <iostream>
 #include <tuple>
 
-#include <boost/heap/fibonacci_heap.hpp>
 #include <vector>
 
 #include "state.h"
@@ -52,12 +51,17 @@ struct OpenList {
 		}
 		_min_heap.emplace(state, gval, hval);
 	};
-	State pop() {
+	State _last_popped; // something isn't working here: duplicates of the same state are cropping up
+	State pop(const unordered_set<State, State::Hasher>& closed) {
 		while (true) {
 			auto [state, g, h] = _min_heap.top();
 			_min_heap.pop();
+			if (closed.find(state) != closed.end()) {
+				continue;
+			}
 			auto best_gval = _best_gval.at(state);
 			if (best_gval == g) {
+				_last_popped = state;
 				return state;
 			}
 		}
