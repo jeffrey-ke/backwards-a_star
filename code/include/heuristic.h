@@ -2,6 +2,7 @@
 #define heuris_h
 #include <cstddef>
 #include <cmath>
+#include <limits>
 #include <utility>
 #include <algorithm>
 
@@ -38,11 +39,12 @@ struct DistanceHeuristic: public Heuristic {
 struct WeightedCombinationHeuristic: public Heuristic {
 	const Heuristic& _h1;
 	const Heuristic& _h2;
-	int _w1, _w2;
-	WeightedCombinationHeuristic(const Heuristic& h1, const Heuristic& h2, int weight1, int weight2): _h1(h1), _h2(h2), _w1(weight1), _w2(weight2) {
+	const Heuristic& _h3;
+	int _w1, _w2, _w3;
+	WeightedCombinationHeuristic(const Heuristic& h1, const Heuristic& h2, const Heuristic& h3, int weight1, int weight2, int weight3): _h1(h1), _h2(h2), _h3(h3), _w1(weight1), _w2(weight2), _w3(weight3){
 	}
 	double operator() (const State& state) const override {
-		return _w1 * _h1(state) + _w2 * _h2(state);
+		return _w1 * _h1(state) + _w2 * _h2(state) + _w3 * _h3(state);
 	}
 };
 
@@ -75,5 +77,23 @@ struct OctileHeuristic: public Heuristic {
 			std::abs(dx - dy)
 		);
 	}
+};
+
+struct RepulsionHeuristic: public Heuristic {
+	const State& _robot_start;
+	int _weight;
+	RepulsionHeuristic(const State& robot_start, int weight): _robot_start(robot_start), _weight(weight){};
+	double operator() (const State& state) const override {
+		const auto& [cur_x, cur_y, cur_t] = state;
+		const auto& [start_x, start_y, start_t] = _robot_start;
+		auto dx = cur_x - start_x;
+		auto dy = cur_y - start_y;
+		double eps = 1.0e-6;
+		auto distance = std::max(
+			std::sqrt(dx * dx + dy * dy),
+			eps
+		);
+		return _weight * 1.0 / distance;
+	};
 };
 #endif
