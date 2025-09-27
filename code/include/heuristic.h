@@ -53,7 +53,7 @@ struct WallHeuristic: public Heuristic {
 	int _weight;
 	WallHeuristic(const Map& map, int weight): _map_ref(map), _weight(weight){};
 	double operator() (const State& state) const override {
-		return _weight * 1.0 / _map_ref.distanceToWall(state);
+		return _weight * 1.0 / _map_ref.distance_to_obs(state);
 	};
 };
 struct OctileHeuristic: public Heuristic {

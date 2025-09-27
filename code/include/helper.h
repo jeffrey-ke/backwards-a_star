@@ -1,12 +1,12 @@
 #ifndef helper_h
 #define helper_h
-#include <utility>
+#include <vector>
 
 #include "state.h"
 
 using Target = std::vector<State>;
 namespace helper {
-Target parse_goals(int* target_traj, int target_steps, int target_poseX, int target_poseY, int curr_time){
+inline Target parse_goals(int* target_traj, int target_steps, int target_poseX, int target_poseY, int curr_time){
 	Target target;
 	target.resize(target_steps);
 	for (int time_step = 0; time_step < target_steps; ++time_step) {

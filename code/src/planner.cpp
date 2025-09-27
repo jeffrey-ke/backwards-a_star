@@ -4,8 +4,6 @@
 #include <unordered_set>
 #include <stack>
 
-#include <boost/functional/hash.hpp>
-
 #include "../include/map.h"
 #include "../include/planner.h"
 #include "../include/openlist.h"
@@ -82,12 +80,9 @@ void planner(
 
 	const State start{robotposeX, robotposeY, curr_time};
 	const vector<State> concrete_goals = helper::parse_goals(target_traj, target_steps, targetposeX, targetposeY, curr_time);
-	Map map{raw_map, x_size, y_size, collision_thresh, concrete_goals};
-	map.set_start(start);
-	OctileHeuristic octile(concrete_goals, 9000000.0, 9000);
-	WallHeuristic wall(map, 8000);
-	RepulsionHeuristic repulse(start, 9000000);
-	WeightedCombinationHeuristic heuristic(octile, wall, repulse, 1, 1, 1);
+	Map map{raw_map, x_size, y_size, collision_thresh, concrete_goals, start, Map::O::BACKWARD};
+	OctileHeuristic octile(start, 9000000.0, 9000);
+	WallHeuristic wall(start, 8000);
 
 	open.insert_update(start, 0.0, heuristic);
 	State expanded{};

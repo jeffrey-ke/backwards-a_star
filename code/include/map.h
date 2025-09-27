@@ -18,34 +18,59 @@ using std::unordered_map;
 using std::unordered_set;
 
 struct Map {
-	static const array<Action, 9> ACTIONS;
+	enum class O {FORWARD, BACKWARD};
+
+	using gval = double;
+	using StateGvalPair = std::pair<State, gval>;
+
 	static const State IMAGINARY_GOAL;
 	static constexpr double BIG_GVAL = std::numeric_limits<double>::infinity();
 
-
 	int* _raw;
 	int _x_size, _y_size, _thres;
+	State _start;
+	array<Action, 9> _actions;
 	unordered_set<State, State::Hasher> _concrete_goals;
-	using gval = double;
 	unordered_map<State, gval, State::Hasher> _state_gval_table;
+	mutable vector<StateGvalPair> _legal_states;
 	mutable cv::Mat _distance_map;
 
-	Map(int* raw, int x_size, int y_size, int thres, const vector<State>& concrete_goals): 
+	Map(int* raw, int x_size, int y_size, int thres, const vector<State>& concrete_goals, State start, O option): 
 		_raw(raw),
 		_x_size(x_size),
 		_y_size(y_size),
-		_thres(thres)
+		_thres(thres),
+		_start(start)
 	{
 		for (const auto& goal: concrete_goals) {
-			update_gval(goal, BIG_GVAL);
+			update_gval(
+				goal, 
+				(option == O::FORWARD) ? BIG_GVAL : 1
+			);
 			_concrete_goals.insert(goal);
 
 		}
-		_legal_states.reserve(ACTIONS.size() + 1);
-		createDistanceMap(_raw, _x_size, _y_size, _thres);
+		auto dt = (option == O::FORWARD) ? 1 : -1;
+		_actions = create_actions(dt);
+		_legal_states.reserve(_actions.size() + 1);
+		create_dmap(_raw, _x_size, _y_size, _thres);
 	};
 
-	void createDistanceMap(int* raw_map, int x_size, int y_size, int thresh) const {
+	array<Action, 9> create_actions(int dt) {
+		assert(std::abs(dt) == 1);
+		return {
+			Action{-1, -1, dt},
+			Action{-1, 0, dt},
+			Action{-1, 1, dt},
+			Action{0, -1, dt},
+			Action{0, 0, dt},
+			Action{0, 1, dt},
+			Action{1, -1, dt},
+			Action{1, 0, dt},
+			Action{1, 1, dt},
+		};
+	}
+	void create_dmap(int* raw_map, int x_size, int y_size, int thresh) const {
 		cv::Mat is_obstacle(y_size, x_size, CV_8UC1);
 		for (int y = 1; y <= y_size; ++y) {
 			for (int x = 1; x <= x_size; ++x) {
@@ -56,13 +81,10 @@ struct Map {
 		cv::distanceTransform(is_obstacle, _distance_map, cv::DIST_L2, cv::DIST_MASK_PRECISE);
 	}
 
-	double distanceToWall(const State& state) const {
+	double distance_to_obs(const State& state) const {
 		return (is_valid(state)) ? _distance_map.at<float>(state.y - 1, state.x - 1) : 0.0;
 	}
 
-	void set_start(const State& state) {
-		update_gval(state, 0.0);
-	};
 	void update_gval(const State& state, gval val) {
 		auto [iter, inserted] = _state_gval_table.try_emplace(state, val);
 		if (!inserted and val < iter->second) {
@@ -82,16 +104,14 @@ struct Map {
 			s.x < _x_size - 1 and
 			s.y >= 0 and
 			s.y < _y_size - 1 and
-			static_cast<int>(_raw[index]) < _thres
+			static_cast<int>(_raw[index]) < _thres and
+			s.t >= 0
 		);
 	};
-	using Gval = double;
-	using StateGvalPair = std::pair<State, Gval>;
-	mutable vector<StateGvalPair> _legal_states;
 	const vector<StateGvalPair>& operator[] (const State& cur)  {
 		_legal_states.clear();
 		auto cur_gval = get_gval(cur);
-		for (const auto& action : ACTIONS) {
+		for (const auto& action : _actions) {
 			State next_state = cur + action;
 			if (is_valid(next_state)) {
 				auto cost = static_cast<double>(
@@ -146,15 +166,4 @@ struct Map {
 	}
 };
 inline const State Map::IMAGINARY_GOAL{0, 0, 0};
-inline const array<Action, 9> Map::ACTIONS = {
-	Action{-1, -1, 1},
-	Action{-1, 0, 1},
-	Action{-1, 1, 1},
-	Action{0, -1, 1},
-	Action{0, 0, 1},
-	Action{0, 1, 1},
-	Action{1, -1, 1},
-	Action{1, 0, 1},
-	Action{1, 1, 1},
-};
 #endif
