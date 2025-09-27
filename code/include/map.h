@@ -5,6 +5,10 @@
 #include <limits>
 #include <unordered_map>
 #include <unordered_set>
+#include <cstdint>
+
+#include <opencv2/core.hpp>
+#include <opencv2/imgproc.hpp>
 
 #include "planner.h"
 #include "state.h"
@@ -24,6 +28,7 @@ struct Map {
 	unordered_set<State, State::Hasher> _concrete_goals;
 	using gval = double;
 	unordered_map<State, gval, State::Hasher> _state_gval_table;
+	mutable cv::Mat _distance_map;
 
 	Map(int* raw, int x_size, int y_size, int thres, const vector<State>& concrete_goals): 
 		_raw(raw),
@@ -37,7 +42,23 @@ struct Map {
 
 		}
 		_legal_states.reserve(ACTIONS.size() + 1);
+		createDistanceMap(_raw, _x_size, _y_size, _thres);
 	};
+
+	void createDistanceMap(int* raw_map, int x_size, int y_size, int thresh) const {
+		cv::Mat is_obstacle(y_size, x_size, CV_8UC1);
+		for (int y = 0; y < y_size; ++y) {
+			for (int x = 0; x < x_size; ++x) {
+       				auto cost = static_cast<int>(raw_map[GETMAPINDEX(x, y, x_size, y_size)]);
+				is_obstacle.at<uint8_t>(y, x) = (cost > thresh) ? 0 : 255;
+			}
+		}
+		cv::distanceTransform(is_obstacle, _distance_map, cv::DIST_L2, cv::DIST_MASK_PRECISE);
+	}
+
+	double distanceToWall(const State& state) const {
+		return (is_valid(state)) ? _distance_map.at<float>(state.y, state.x) : 0.0;
+	}
 
 	void set_start(const State& state) {
 		update_gval(state, 0.0);
