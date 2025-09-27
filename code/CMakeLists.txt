@@ -10,7 +10,7 @@ add_executable(run_test
 
 target_compile_options(run_test
 	PRIVATE
-	$<$<CONFIG:Release>:-O3 -ffast-math>
+	$<$<CONFIG:Release>:-O3>
 	$<$<CONFIG:Debug>:-g>
 )
 # Have the executable depend on the header files.
