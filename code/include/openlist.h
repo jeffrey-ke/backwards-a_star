@@ -2,35 +2,39 @@
 #define open_h
 #include <cassert>
 #include <limits>
+#include <queue>
 #include <unordered_map>
 #include <iostream>
+#include <tuple>
 
 #include <boost/heap/fibonacci_heap.hpp>
+#include <vector>
 
 #include "state.h"
 #include "heuristic.h"
 using std::unordered_map;
 struct OpenList {
-	using StateFvalPair = std::pair<State, double>;
+	using StateGvalHval = std::tuple<State, double, double>;
 	struct LT {
-		bool operator() (const StateFvalPair& lhs, const StateFvalPair& rhs) const {
-			return lhs.second < rhs.second;
+		bool operator() (const StateGvalHval& lhs, const StateGvalHval& rhs) const {
+			return std::get<1>(lhs) + std::get<2>(lhs) < std::get<1>(rhs) + std::get<2>(rhs);
 		}
 	};
 
 	struct GT {
-		bool operator() (const StateFvalPair& lhs, const StateFvalPair& rhs) const{
-			return lhs.second > rhs.second;
+		bool operator() (const StateGvalHval& lhs, const StateGvalHval& rhs) const{
+			return std::get<1>(lhs) + std::get<2>(lhs) > std::get<1>(rhs) + std::get<2>(rhs);
 		}
 	};
-	using Heap = boost::heap::fibonacci_heap<
-		StateFvalPair,
-		boost::heap::stable<false>,
-		boost::heap::compare<GT>
+	using Heap = std::priority_queue<
+		StateGvalHval,
+		vector<StateGvalHval>,
+		GT
 	>;
 
 	Heap _min_heap;
-	unordered_map<State, Heap::handle_type, State::Hasher> _state_handle_index;
+	unordered_map<State, int, State::Hasher> _best_gval;
+
 
 	/*
 	* param state is the discovered state with noninf gvalue.
@@ -41,28 +45,23 @@ struct OpenList {
 	*/
 	void insert_update(const State& state, double gval, Heuristic& h) {
 		// state is NOT in the openlist, insert it.
-		const auto hval = h(state);
-		if (_state_handle_index.find(state) == _state_handle_index.end()) {
-			auto handle = _min_heap.push(
-				StateFvalPair(state, gval + hval)
-			);
-			_state_handle_index[state] = handle;
+		auto hval = h(state);
+		auto [iter, inserted] = _best_gval.try_emplace(state, gval);
+		if (!inserted and gval < iter->second) {
+			iter->second = gval;
 		}
-		// state IS in the openlist, update it.
-		else { 
-			const auto& handle = _state_handle_index[state];
-			const auto& [cur_state, fval] = *handle;
-			if (gval + hval < fval) {
-				_min_heap.decrease(handle, StateFvalPair{state, gval + hval});
-			}
-		}
+		_min_heap.emplace(state, gval, hval);
 	};
 	State pop() {
-		auto [state, cost] = _min_heap.top();
-		_min_heap.pop();
-		_state_handle_index.erase(state);
-		return state;
-
+		while (true) {
+			auto [state, g, h] = _min_heap.top();
+			_min_heap.pop();
+			auto best_gval = _best_gval.at(state);
+			if (best_gval == g) {
+				return state;
+			}
+		}
+		
 	};
 
 };
