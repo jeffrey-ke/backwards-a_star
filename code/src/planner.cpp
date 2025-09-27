@@ -83,9 +83,9 @@ void planner(
 	const vector<State> concrete_goals = helper::parse_goals(target_traj, target_steps, targetposeX, targetposeY, curr_time);
 	Map map{raw_map, x_size, y_size, collision_thresh, concrete_goals};
 	map.set_start(start);
-	OctileHeuristic octile(concrete_goals, 9000000.0, 9000);
-	WallHeuristic wall(map, 8000);
-	RepulsionHeuristic repulse(start, 9000000);
+	OctileHeuristic octile(concrete_goals, 9000000.0, 600);
+	WallHeuristic wall(map, 80000);
+	RepulsionHeuristic repulse(start, 900000);
 	WeightedCombinationHeuristic heuristic(octile, wall, repulse, 1, 1, 1);
 
 	open.insert_update(start, 0.0, heuristic);
