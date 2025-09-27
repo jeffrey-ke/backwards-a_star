@@ -1,13 +1,18 @@
 #ifndef open_h
 #define open_h
 #include <cassert>
+#include <cstdint>
 #include <limits>
+#include <memory>
 #include <queue>
+#include <sys/_types/_sigaltstack.h>
 #include <unordered_map>
 #include <iostream>
 #include <tuple>
-
+#include <utility>
 #include <vector>
+
+#include <boost/heap/d_ary_heap.hpp>
 
 #include "state.h"
 #include "heuristic.h"
@@ -25,47 +30,38 @@ struct OpenList {
 			return std::get<1>(lhs) + std::get<2>(lhs) > std::get<1>(rhs) + std::get<2>(rhs);
 		}
 	};
-	using Heap = std::priority_queue<
+	using Heap = boost::heap::d_ary_heap<
 		StateGvalHval,
-		vector<StateGvalHval>,
-		GT
+		boost::heap::arity<4>,
+		boost::heap::compare<GT>,
+		boost::heap::mutable_<true>
 	>;
+	using StateHandleMap = unordered_map<State, Heap::handle_type, State::Hasher>;
 
 	Heap _min_heap;
-	unordered_map<State, int, State::Hasher> _best_gval;
+	StateHandleMap _state_handle_map;
 
-
-	/*
-	* param state is the discovered state with noninf gvalue.
-	* It is a successor of a expanded state, found via map[expanded], which returns a
-	* vector of states 
-	* It assumes that the caller has created a new non inf state
-	* from calling ma
-	*/
 	void insert_update(const State& state, double gval, Heuristic& h) {
-		// state is NOT in the openlist, insert it.
+		const auto& iter = _state_handle_map.find(state);
 		auto hval = h(state);
-		auto [iter, inserted] = _best_gval.try_emplace(state, gval);
-		if (!inserted and gval < iter->second) {
-			iter->second = gval;
+		if (iter == _state_handle_map.end()) {
+			auto handle = _min_heap.push(StateGvalHval{state, gval, hval});
+			_state_handle_map.emplace(state, handle);
 		}
-		_min_heap.emplace(state, gval, hval);
+		else {
+			auto handle = iter->second;
+			auto [s, old_g, old_h] = *handle;
+			assert(hval == old_h);
+			if (gval < old_g) {
+				_min_heap.decrease(handle, StateGvalHval{state, gval, hval});
+			}
+		}
 	};
-	State _last_popped; // something isn't working here: duplicates of the same state are cropping up
 	State pop(const unordered_set<State, State::Hasher>& closed) {
-		while (true) {
-			auto [state, g, h] = _min_heap.top();
-			_min_heap.pop();
-			if (closed.find(state) != closed.end()) {
-				continue;
-			}
-			auto best_gval = _best_gval.at(state);
-			if (best_gval == g) {
-				_last_popped = state;
-				return state;
-			}
-		}
-		
+		auto [state, g, h] = _min_heap.top();
+		_min_heap.pop();
+		_state_handle_map.erase(state);
+		return state;
 	};
 
 };
