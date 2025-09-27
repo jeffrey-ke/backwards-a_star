@@ -47,17 +47,17 @@ struct Map {
 
 	void createDistanceMap(int* raw_map, int x_size, int y_size, int thresh) const {
 		cv::Mat is_obstacle(y_size, x_size, CV_8UC1);
-		for (int y = 0; y < y_size; ++y) {
-			for (int x = 0; x < x_size; ++x) {
+		for (int y = 1; y <= y_size; ++y) {
+			for (int x = 1; x <= x_size; ++x) {
        				auto cost = static_cast<int>(raw_map[GETMAPINDEX(x, y, x_size, y_size)]);
-				is_obstacle.at<uint8_t>(y, x) = (cost > thresh) ? 0 : 255;
+				is_obstacle.at<uint8_t>(y - 1, x - 1) = (cost > thresh) ? 0 : 255;
 			}
 		}
 		cv::distanceTransform(is_obstacle, _distance_map, cv::DIST_L2, cv::DIST_MASK_PRECISE);
 	}
 
 	double distanceToWall(const State& state) const {
-		return (is_valid(state)) ? _distance_map.at<float>(state.y, state.x) : 0.0;
+		return (is_valid(state)) ? _distance_map.at<float>(state.y - 1, state.x - 1) : 0.0;
 	}
 
 	void set_start(const State& state) {
