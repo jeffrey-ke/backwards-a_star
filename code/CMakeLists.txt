@@ -7,11 +7,21 @@ set(CMAKE_CXX_STANDARD 17)
 add_executable(run_test
 	src/planner.cpp
 	src/runtest.cpp)
+
+target_compile_options(run_test
+	PRIVATE
+	$<$<CONFIG:Release>:-O3 -ffast-math>
+	$<$<CONFIG:Debug>:-g>
+)
 # Have the executable depend on the header files.
 target_include_directories(run_test PRIVATE ${CMAKE_SOURCE_DIR}/include)
-if(APPLE)
-	target_include_directories(run_test PRIVATE "/opt/homebrew/include")
-endif()
+
+# Find and link OpenCV
+find_package(OpenCV REQUIRED)
+find_package(Boost REQUIRED)
+target_include_directories(run_test PRIVATE ${OpenCV_INCLUDE_DIRS})
+target_link_libraries(run_test ${OpenCV_LIBS})
+target_include_directories(run_test PRIVATE ${Boost_INCLUDE_DIRS})
 
 
 # Define the absolute path to relevant directories.
