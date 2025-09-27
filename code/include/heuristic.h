@@ -35,6 +35,25 @@ struct DistanceHeuristic: public Heuristic {
 		);
 	};
 };
+struct WeightedCombinationHeuristic: public Heuristic {
+	const Heuristic& _h1;
+	const Heuristic& _h2;
+	int _w1, _w2;
+	WeightedCombinationHeuristic(const Heuristic& h1, const Heuristic& h2, int weight1, int weight2): _h1(h1), _h2(h2), _w1(weight1), _w2(weight2) {
+	}
+	double operator() (const State& state) const override {
+		return _w1 * _h1(state) + _w2 * _h2(state);
+	}
+};
+
+struct WallHeuristic: public Heuristic {
+	const Map& _map_ref;
+	int _weight;
+	WallHeuristic(const Map& map, int weight): _map_ref(map), _weight(weight){};
+	double operator() (const State& state) const override {
+		return _weight * 1.0 / _map_ref.distanceToWall(state);
+	};
+};
 struct OctileHeuristic: public Heuristic {
 	const vector<State>& _target;
 	double _weight;
