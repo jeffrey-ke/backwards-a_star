@@ -63,6 +63,7 @@ struct WallHeuristic: public Heuristic {
 		return _weight * 1.0 / _map_ref.distance_to_obs(state);
 	};
 };
+
 struct OctileHeuristic: public Heuristic {
 	const vector<State>& _target;
 	double _weight;
@@ -83,10 +84,14 @@ struct OctileHeuristic: public Heuristic {
 		const auto& [tar_x, tar_y, tar_t] = _target.at(index);  //is it guaranteed that _target will be at least steps long? return std::sqrt(
 		double dx = std::abs(cur_x - tar_x);
 		double dy = std::abs(cur_y - tar_y);
-		return _weight * (
+		auto distance = (
 			std::sqrt(2) * std::min(dx, dy) + 
 			std::abs(dx - dy)
 		);
+		if (_mode == MODE::BACKWARD and state.t < distance) {
+			return Map::BIG_GVAL;
+		}
+		return _weight * distance;
 	}
 };
 
