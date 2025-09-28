@@ -27,11 +27,12 @@ struct Map {
 	static const State IMAGINARY_GOAL;
 	static constexpr double BIG_GVAL = std::numeric_limits<double>::infinity();
 
+	const array<Action, 9> _actions;
+
 	MODE _mode;
 	int* _raw;
 	int _x_size, _y_size, _thres;
 	State _start;
-	array<Action, 9> _actions;
 	unordered_set<State, State::Hasher> _concrete_goals;
 	unordered_map<State, gval, State::Hasher> _state_gval_table;
 	mutable vector<StateGvalPair> _legal_states;
@@ -43,7 +44,8 @@ struct Map {
 		_y_size(y_size),
 		_thres(thres),
 		_start(start),
-		_mode(mode)
+		_mode(mode),
+		_actions(create_actions((mode == MODE::FORWARD) ? 1 : -1))
 	{
 		for (const auto& goal: concrete_goals) {
 			update_gval(
@@ -53,8 +55,6 @@ struct Map {
 			_concrete_goals.insert(goal);
 
 		}
-		auto dt = (mode == MODE::FORWARD) ? 1 : -1;
-		_actions = create_actions(dt);
 		_legal_states.reserve(_actions.size() + 1);
 		create_dmap(_raw, _x_size, _y_size, _thres);
 	};
@@ -144,11 +144,11 @@ struct Map {
 		_legal_states.clear();
 		auto cur_g = get_gval(cur);
 		if (cur == IMAGINARY_GOAL) {
-			assert(get_gval(cur) == 0);
+			assert(cur_g == 0);
 			for (const auto& g : _concrete_goals){
 				auto goal_g = get_gval(g);
 				assert(goal_g == 1);
-				_legal_states.push_back({g, get_gval(g)});
+				_legal_states.push_back({g, goal_g});
 			}
 		}
 		else {
