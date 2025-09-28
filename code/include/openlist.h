@@ -57,7 +57,8 @@ struct OpenList {
 			}
 		}
 	};
-	State pop(const unordered_set<State, State::Hasher>& closed) {
+
+	State pop() {
 		auto [state, g, h] = _min_heap.top();
 		_min_heap.pop();
 		_state_handle_map.erase(state);

@@ -3,6 +3,8 @@
 #include <unordered_set>
 #include <stack>
 
+#include <boost/functional/hash.hpp>
+
 #include "../include/map.h"
 #include "../include/planner.h"
 #include "../include/openlist.h"
@@ -90,7 +92,7 @@ void planner(
 
 	State expanded{};
 	while (true) {
-		expanded = open.pop(closed);
+		expanded = open.pop();
 		if (expanded == goal) {
 			break;
 		}
