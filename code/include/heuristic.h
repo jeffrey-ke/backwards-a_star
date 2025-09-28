@@ -7,6 +7,7 @@
 #include <algorithm>
 
 #include "state.h"
+#include "planner.h"
 #include "map.h"
 
 using std::vector;
@@ -60,11 +61,15 @@ struct OctileHeuristic: public Heuristic {
 	const vector<State>& _target;
 	double _weight;
 	int _look_ahead;
+	MODE _mode;
 
-	OctileHeuristic(const vector<State>& target, double weight, int look_ahead): _target(target), _weight(weight), _look_ahead(look_ahead){};
+	OctileHeuristic(const vector<State>& target, double weight, int look_ahead, MODE mode): _target(target), _weight(weight), _look_ahead(look_ahead), _mode(mode) {};
 
 	double operator() (const State& state) const override {
-		if (state == Map::IMAGINARY_GOAL) {
+		if (_mode == MODE::FORWARD and state == Map::IMAGINARY_GOAL) {
+			return 0;
+		}
+		else if (_mode == MODE::BACKWARD and state == _target.at(0)) {
 			return 0;
 		}
 		const auto& [cur_x, cur_y, cur_t] = state;

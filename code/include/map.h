@@ -1,6 +1,7 @@
 #ifndef map_h
 #define map_h
 #include <algorithm>
+#include <cassert>
 #include <iterator>
 #include <limits>
 #include <unordered_map>
@@ -9,6 +10,7 @@
 
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
+#include <vector>
 
 #include "planner.h"
 #include "state.h"
@@ -18,7 +20,6 @@ using std::unordered_map;
 using std::unordered_set;
 
 struct Map {
-	enum class O {FORWARD, BACKWARD};
 
 	using gval = double;
 	using StateGvalPair = std::pair<State, gval>;
@@ -26,6 +27,7 @@ struct Map {
 	static const State IMAGINARY_GOAL;
 	static constexpr double BIG_GVAL = std::numeric_limits<double>::infinity();
 
+	MODE _mode;
 	int* _raw;
 	int _x_size, _y_size, _thres;
 	State _start;
@@ -35,22 +37,23 @@ struct Map {
 	mutable vector<StateGvalPair> _legal_states;
 	mutable cv::Mat _distance_map;
 
-	Map(int* raw, int x_size, int y_size, int thres, const vector<State>& concrete_goals, State start, O option): 
+	Map(int* raw, int x_size, int y_size, int thres, const vector<State>& concrete_goals, State start, MODE mode): 
 		_raw(raw),
 		_x_size(x_size),
 		_y_size(y_size),
 		_thres(thres),
-		_start(start)
+		_start(start),
+		_mode(mode)
 	{
 		for (const auto& goal: concrete_goals) {
 			update_gval(
 				goal, 
-				(option == O::FORWARD) ? BIG_GVAL : 1
+				(mode == MODE::FORWARD) ? BIG_GVAL : 1
 			);
 			_concrete_goals.insert(goal);
 
 		}
-		auto dt = (option == O::FORWARD) ? 1 : -1;
+		auto dt = (mode == MODE::FORWARD) ? 1 : -1;
 		_actions = create_actions(dt);
 		_legal_states.reserve(_actions.size() + 1);
 		create_dmap(_raw, _x_size, _y_size, _thres);
@@ -70,6 +73,7 @@ struct Map {
 			Action{1, 1, dt},
 		};
 	}
+
 	void create_dmap(int* raw_map, int x_size, int y_size, int thresh) const {
 		cv::Mat is_obstacle(y_size, x_size, CV_8UC1);
 		for (int y = 1; y <= y_size; ++y) {
@@ -94,7 +98,7 @@ struct Map {
 
 	const gval get_gval(const State& state) const {
 		auto it = _state_gval_table.find(state);
-		return (it != _state_gval_table.end()) ? it->second : std::numeric_limits<double>::infinity();
+		return (it != _state_gval_table.end()) ? it->second : BIG_GVAL;
 	};
 
 	bool is_valid(const State& s) const {
@@ -108,9 +112,15 @@ struct Map {
 			s.t >= 0
 		);
 	};
-	const vector<StateGvalPair>& operator[] (const State& cur)  {
+
+	const vector<StateGvalPair>& successors(const State& cur) {
+		return (_mode == MODE::FORWARD) ? forwards_succ(cur) : backwards_succ(cur);
+	};
+
+	const vector<StateGvalPair>& forwards_succ(const State& cur)  {
 		_legal_states.clear();
 		auto cur_gval = get_gval(cur);
+		assert(cur_gval < BIG_GVAL);
 		for (const auto& action : _actions) {
 			State next_state = cur + action;
 			if (is_valid(next_state)) {
@@ -129,20 +139,44 @@ struct Map {
 		}
 		return _legal_states;
 	};
+
+	const vector<StateGvalPair>& backwards_succ(const State& cur) {
+		_legal_states.clear();
+		auto cur_g = get_gval(cur);
+		if (cur == IMAGINARY_GOAL) {
+			assert(get_gval(cur) == 0);
+			for (const auto& g : _concrete_goals){
+				auto goal_g = get_gval(g);
+				assert(goal_g == 1);
+				_legal_states.push_back({g, get_gval(g)});
+			}
+		}
+		else {
+			for (const auto& act : _actions) {
+				State next = cur + act;
+				if (is_valid(next)) {
+					auto cost = static_cast<double>(
+						_raw[GETMAPINDEX(next.x, next.y, _x_size, _y_size)]
+					);
+					auto next_g = cur_g + cost;
+					update_gval(next, next_g); //this is actually necessary, because it will
+					//make states that it's just traveled a higher gvalue, but this update gvalue
+					//only changes it if it's lower
+					_legal_states.push_back({next, next_g});
+				}
+			}
+		}
+		return _legal_states;
+	};
+
 	mutable vector<StateGvalPair> backwards_preds;
-	const vector<StateGvalPair>& backwards(const State& s) {
+	const vector<StateGvalPair>& predecessors(const State& s) {
 		backwards_preds.clear();
-		const array<Action, 9> actions = {
-			Action{-1, -1, -1},
-			Action{-1, 0, -1},
-			Action{-1, 1, -1},
-			Action{0, -1, -1},
-			Action{0, 0, -1},
-			Action{0, 1, -1},
-			Action{1, -1, -1},
-			Action{1, 0, -1},
-			Action{1, 1, -1},
-		};
+		return (_mode == MODE::FORWARD) ? backtrack_forward(s) : backtrack_backward(s);
+	};
+
+	const vector<StateGvalPair>& backtrack_forward(const State& s) {
+		auto actions = create_actions(-1);
 		if (s == IMAGINARY_GOAL) {
 			for (const auto& goal : _concrete_goals) {
 				auto goal_gval = get_gval(goal);
@@ -151,7 +185,7 @@ struct Map {
 			return backwards_preds;
 		}
 		for (const auto& a : actions) {
-			const auto next_state = s + a;
+			auto next_state = s + a;
 			if (is_valid(next_state)) {
 				auto cost = static_cast<double>(
 					_raw[
@@ -160,6 +194,21 @@ struct Map {
 				);
 				auto next_gval = get_gval(next_state); // this MUST exist
 				backwards_preds.push_back({next_state, next_gval + cost});
+			}
+		}
+		return backwards_preds;
+	};
+
+	const vector<StateGvalPair>& backtrack_backward(const State& s) {
+		auto actions = create_actions(1);
+		for (const auto& act : actions)  {
+			State next = s + act;
+			if (is_valid(next)) {
+				auto cost = static_cast<double>(
+					_raw[GETMAPINDEX(next.x, next.y, _x_size, _y_size)]
+				);
+				auto next_g = get_gval(next);
+				backwards_preds.push_back({next, next_g + cost});
 			}
 		}
 		return backwards_preds;
