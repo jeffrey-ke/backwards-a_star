@@ -104,10 +104,10 @@ struct Map {
 	bool is_valid(const State& s) const {
 		const auto index = GETMAPINDEX(s.x, s.y, _x_size, _y_size);
 		return (
-			s.x >= 0 and
-			s.x < _x_size - 1 and
-			s.y >= 0 and
-			s.y < _y_size - 1 and
+			s.x > 0 and
+			s.x <= _x_size and
+			s.y > 0 and
+			s.y <= _y_size and
 			static_cast<int>(_raw[index]) < _thres and
 			s.t >= 0
 		);
