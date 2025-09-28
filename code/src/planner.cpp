@@ -38,10 +38,9 @@ stack<State> backtrack(const State& end, const State& start, Map& map) {
 	}
 	return soln;
 }
+
 void expand_state(OpenList& open, const State& state, unordered_set<State, State::Hasher>& closed, Map& map, Heuristic& heuristic) {
 	const auto& sucs_costs = map.successors(state);
-	auto iter = closed.find(state);
-	auto end = closed.end();
 	for (const auto& [s, gval] : sucs_costs) {
 		if (closed.find(s) == closed.end()) {
 			open.insert_update(s, gval, heuristic);
