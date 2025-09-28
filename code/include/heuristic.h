@@ -37,16 +37,19 @@ struct DistanceHeuristic: public Heuristic {
 		);
 	};
 };
-struct WeightedCombinationHeuristic: public Heuristic {
-	const Heuristic& _h1;
-	const Heuristic& _h2;
-	const Heuristic& _h3;
-	int _w1, _w2, _w3;
-	WeightedCombinationHeuristic(const Heuristic& h1, const Heuristic& h2, const Heuristic& h3, int weight1, int weight2, int weight3): _h1(h1), _h2(h2), _h3(h3), _w1(weight1), _w2(weight2), _w3(weight3){
-	}
+template <typename... Heuris>
+struct SumHeuristic: public Heuristic {
+	using WrappedHeuristic = std::reference_wrapper<const Heuristic>;
+
+	std::array<WrappedHeuristic, sizeof...(Heuris)> _heuristics;
+	SumHeuristic(const Heuris&... heuris): _heuristics{heuris...}{}
 	double operator() (const State& state) const override {
-		return _w1 * _h1(state) + _w2 * _h2(state) + _w3 * _h3(state);
-	}
+		double sum{0.0};
+		for (const auto& h : _heuristics) {
+			sum += h(state);
+		}
+		return sum;
+	};
 };
 
 struct WallHeuristic: public Heuristic {
