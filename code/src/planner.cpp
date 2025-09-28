@@ -20,7 +20,7 @@ stack<State> backtrack(const State& end, const State& start, Map& map) {
 
 	auto cur = end;
 	while (cur != start) {
-		const vector<Map::StateGvalPair>& preds = map.backwards(cur); 
+		const vector<Map::StateGvalPair>& preds = map.predecessors(cur); 
 		auto min_gval = Map::BIG_GVAL;
 		State next_state;
 		for (const auto& [pred, gval] : preds) {
@@ -37,10 +37,7 @@ stack<State> backtrack(const State& end, const State& start, Map& map) {
 	return soln;
 }
 void expand_state(OpenList& open, const State& state, unordered_set<State, State::Hasher>& closed, Map& map, Heuristic& heuristic) {
-	if (state == Map::IMAGINARY_GOAL) {
-		return;
-	}
-	const auto& sucs_costs = map[state];
+	const auto& sucs_costs = map.successors(state);
 	auto iter = closed.find(state);
 	auto end = closed.end();
 	for (const auto& [s, gval] : sucs_costs) {
@@ -77,19 +74,28 @@ void planner(
 	OpenList open;
 	unordered_set<State, State::Hasher> closed;
 
-	const State start{robotposeX, robotposeY, curr_time};
-	const vector<State> concrete_goals = helper::parse_goals(target_traj, target_steps, targetposeX, targetposeY, curr_time);
-	Map map{raw_map, x_size, y_size, collision_thresh, concrete_goals, start, Map::O::BACKWARD};
-	OctileHeuristic octile(start, 9000000.0, 9000);
-	WallHeuristic wall(start, 8000);
+	auto A_STAR_MODE{MODE::BACKWARD};
 
-	open.insert_update(start, 0.0, heuristic);
+	const State robot_init{robotposeX, robotposeY, curr_time};
+	const vector<State> concrete_goals = helper::parse_goals(target_traj, target_steps, targetposeX, targetposeY, curr_time);
+
+	State goal{robot_init};
+	State start{Map::IMAGINARY_GOAL};
+
+	Map map{raw_map, x_size, y_size, collision_thresh, concrete_goals, start, A_STAR_MODE};
+	OctileHeuristic octile({goal}, 9000000.0, 9000, A_STAR_MODE);
+	WallHeuristic wall(map, 8000);
+	WeightedCombinationHeuristic heuristic(octile, octile, wall, 0, 1, 1);
+	open.insert_update(Map::IMAGINARY_GOAL, 0.0, heuristic);
+
 	State expanded{};
-	do {
+	while (true) {
 		expanded = open.pop(closed);
+		if (expanded == goal) {
+			break;
+		}
 		expand_state(open, expanded, closed, map, heuristic);
 	}
-	while (expanded != Map::IMAGINARY_GOAL);
 	soln = backtrack(expanded, start, map);
 	const auto& [next_x, next_y, t] = soln.top();
 	soln.pop();
