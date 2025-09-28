@@ -1,7 +1,9 @@
 #ifndef heuris_h
 #define heuris_h
+#include <array>
 #include <cstddef>
 #include <cmath>
+#include <functional>
 #include <limits>
 #include <utility>
 #include <algorithm>
@@ -65,7 +67,7 @@ struct WallHeuristic: public Heuristic {
 };
 
 struct OctileHeuristic: public Heuristic {
-	const vector<State>& _target;
+	const vector<State> _target;
 	double _weight;
 	int _look_ahead;
 	MODE _mode;
