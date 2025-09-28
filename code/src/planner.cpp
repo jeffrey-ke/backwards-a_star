@@ -1,7 +1,7 @@
 #include <cassert>
 #include <vector>
 #include <unordered_set>
-#include <stack>
+#include <deque>
 
 #include <boost/functional/hash.hpp>
 
@@ -15,12 +15,15 @@
 #define NUMOFDIRS 8
 using std::unordered_set;
 using std::vector;
-using std::stack;
+using std::deque;
 
-stack<State> backtrack(const State& end, const State& start, Map& map) {
-	stack<State> soln;
+deque<State> backtrack(const State& goal, const State& start, Map& map) {
+	deque<State> soln;
 
-	auto cur = end;
+	auto cur = goal;
+	if (goal != Map::IMAGINARY_GOAL) 
+		soln.push_back(goal);
+
 	while (cur != start) {
 		const vector<Map::StateGvalPair>& preds = map.predecessors(cur); 
 		auto min_gval = Map::BIG_GVAL;
@@ -33,9 +36,12 @@ stack<State> backtrack(const State& end, const State& start, Map& map) {
 				next_state = pred;
 			}
 		}
-		soln.push(next_state); //copies anyway, don't need to make next_state a copy.
+		if (next_state != Map::IMAGINARY_GOAL)
+			soln.push_back(next_state); //copies anyway, don't need to make next_state a copy.
 		cur = next_state;
 	}
+	soln.pop_front(); // the front is always the goal: for forward, it's the imaginary goal, for backwards, it's the starting position.
+	// in either case, this doesn't belong here
 	return soln;
 }
 
@@ -48,7 +54,17 @@ void expand_state(OpenList& open, const State& state, unordered_set<State, State
 	}
 	closed.insert(state);
 }
-static stack<State> soln;
+static deque<State> soln;
+State get_next(deque<State>& soln, MODE a_star_mode) {
+	auto next_state = (a_star_mode == MODE::BACKWARD) ? soln.front() : soln.back();
+	if (a_star_mode == MODE::BACKWARD) {
+		soln.pop_front();
+	}
+	else {
+		soln.pop_back();
+	}
+	return next_state;
+}
 void planner(
 	int* raw_map,
 	int collision_thresh,
@@ -64,9 +80,10 @@ void planner(
 	int* action_ptr
 ) 
 {
+	auto A_STAR_MODE{MODE::BACKWARD};
+
 	if (soln.size() > 0)  {
-		const auto& [x, y, t] = soln.top();
-		soln.pop();
+		const auto& [x, y, t] = get_next(soln, A_STAR_MODE);
 		action_ptr[0] = x;
 		action_ptr[1] = y;
 		return;
@@ -75,7 +92,6 @@ void planner(
 	OpenList open;
 	unordered_set<State, State::Hasher> closed;
 
-	auto A_STAR_MODE{MODE::BACKWARD};
 
 	const State robot_init{robotposeX, robotposeY, curr_time};
 	const vector<State> concrete_goals = helper::parse_goals(target_traj, target_steps, targetposeX, targetposeY, curr_time);
@@ -85,9 +101,10 @@ void planner(
 
 	Map map{raw_map, x_size, y_size, collision_thresh, concrete_goals, start, A_STAR_MODE};
 	OctileHeuristic octile({goal}, 9000000.0, 9000, A_STAR_MODE);
-	WallHeuristic wall(map, 8000);
-	WeightedCombinationHeuristic heuristic(octile, octile, wall, 0, 1, 1);
-	open.insert_update(Map::IMAGINARY_GOAL, 0.0, heuristic);
+	// WallHeuristic wall(map, 8000);
+	SumHeuristic heuristic(octile);
+	map.update_gval(start, 0.0);
+	open.insert_update(start, 0.0, heuristic);
 
 	State expanded{};
 	while (true) {
@@ -98,8 +115,7 @@ void planner(
 		expand_state(open, expanded, closed, map, heuristic);
 	}
 	soln = backtrack(expanded, start, map);
-	const auto& [next_x, next_y, t] = soln.top();
-	soln.pop();
+	const auto& [next_x, next_y, next_t] = get_next(soln, A_STAR_MODE);
 	action_ptr[0] = next_x;
 	action_ptr[1] = next_y;
 	return;
