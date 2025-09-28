@@ -201,6 +201,10 @@ struct Map {
 
 	const vector<StateGvalPair>& backtrack_backward(const State& s) {
 		auto actions = create_actions(1);
+		auto cur_g = get_gval(s);
+		if (_concrete_goals.find(s) != _concrete_goals.end()) {
+			backwards_preds.push_back({Map::IMAGINARY_GOAL, cur_g + 1});
+		}
 		for (const auto& act : actions)  {
 			State next = s + act;
 			if (is_valid(next)) {
