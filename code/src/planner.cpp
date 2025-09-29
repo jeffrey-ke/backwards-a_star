@@ -89,7 +89,7 @@ void planner(
 		action_ptr[1] = y;
 		return;
 	}
-	// assert(curr_time == 0);
+	assert(curr_time == 0);
 	OpenList open;
 	unordered_set<State, State::Hasher> closed;
 
