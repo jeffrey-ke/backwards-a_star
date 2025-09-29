@@ -29,21 +29,23 @@ deque<State> backtrack(const State& goal, const State& start, Map& map) {
 		soln.push_back(goal);
 
 	while (cur != start) {
-		const vector<Map::StateGvalPair>& preds = map.predecessors(cur); 
+		const vector<Map::StateGvalPair>& preds = map.predecessors(cur);
 		auto min_gval = Map::BIG_GVAL;
-		State next_state;
+		State next_state = cur; // Initialize to current state
 		for (const auto& [pred, gval] : preds) {
 			if (
-				(gval < min_gval) 
+				(gval < min_gval)
 			){
 				min_gval = gval;
 				next_state = pred;
 			}
 		}
+		assert(next_state != cur && "No valid predecessor found");
 		if (next_state != Map::IMAGINARY_GOAL)
 			soln.push_back(next_state); //copies anyway, don't need to make next_state a copy.
 		cur = next_state;
 	}
+	assert(!soln.empty() && "Solution should not be empty before pop");
 	soln.pop_front(); // the front is always the goal: for forward, it's the imaginary goal, for backwards, it's the starting position.
 	// in either case, this doesn't belong here
 	return soln;
