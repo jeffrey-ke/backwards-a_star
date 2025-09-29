@@ -3,21 +3,105 @@
 #include <array>
 #include <cstddef>
 #include <cmath>
+#include <filesystem>
 #include <functional>
 #include <limits>
+#include <tuple>
+#include <unordered_map>
+#include <unordered_set>
+#include <set>
 #include <utility>
 #include <algorithm>
+
+#include <boost/heap/d_ary_heap.hpp>
+#include <variant>
+#include <vector>
 
 #include "state.h"
 #include "planner.h"
 #include "map.h"
 
+
 using std::vector;
+using std::unordered_map;
+using std::pair;
 struct Heuristic {
 	// using inheritance
 	virtual double operator() (const State& state) const = 0;
+
 };
 //
+struct DijkstraHeuristic: public Heuristic {
+	using StateDistance = pair<State, double>;
+	struct StateDistanceGT {
+		bool operator() (const StateDistance& lhs, const StateDistance& rhs) const {
+			return lhs.second > rhs.second;
+		}
+	};
+	using Heap = boost::heap::d_ary_heap<
+		StateDistance,
+		boost::heap::arity<4>,
+		boost::heap::compare<StateDistanceGT>,
+		boost::heap::mutable_<true>
+	>;
+	using StateSet = std::set<State>;
+
+	Map _map;
+	State _src;
+	// StateDistanceMap _distance_from_src; this is inside map
+	Heap _unvisited;
+	StateSet  _visited;
+	unordered_map<State, Heap::handle_type, State::Hasher> _state_handle_index;
+	int _weight;
+
+	DijkstraHeuristic(int* raw_map, int x_size, int y_size, int thres, const vector<State>& concrete_goals, const State& src, int weight): 
+		_src(src),
+		_map(raw_map, x_size, y_size, thres, concrete_goals, src, MODE::DIJK),
+		_weight(weight)
+		{
+		auto handle = _unvisited.push({src, 0.0});
+		
+		while (_unvisited.size() > 0) {
+			auto [cur_state, cost] = _unvisited.top();
+			_unvisited.pop();
+			_visited.insert(cur_state);
+			auto neighbors = _map.successors(cur_state);
+			for (const auto& [n, dist] : neighbors) {
+				if (_visited.find(n) == _visited.end()) {
+					insert_update(_unvisited, n, dist);
+				}
+			}
+		}
+	}
+	void insert_update(Heap& unvisited, const State& s, double dist){
+		auto iter = _state_handle_index.find(s);
+		if (iter == _state_handle_index.end()) {
+			auto handle = unvisited.push(StateDistance{s, dist});
+			_state_handle_index.emplace(
+				std::piecewise_construct,
+				std::forward_as_tuple(s.x, s.y, s.t),
+				std::forward_as_tuple(handle)
+			);
+		}
+		else {
+			auto handle = iter->second;
+			auto [state, old_dist] = *handle;
+			if (dist < old_dist) {
+				unvisited.increase(handle, StateDistance{state, dist});
+			}
+		}
+	}
+	double operator() (const State& state) const override {
+		if (state == Map::IMAGINARY_GOAL) {
+			return 0;
+		}
+		auto dist = _map.get_gval(State{state.x, state.y, 0});
+		assert (dist < Map::BIG_GVAL);
+		if (dist > state.t) 
+			return Map::BIG_GVAL;
+		return _weight * dist;
+	}
+};
 struct DistanceHeuristic: public Heuristic {
 
 	const vector<State>& _target;

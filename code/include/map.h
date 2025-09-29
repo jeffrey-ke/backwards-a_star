@@ -45,22 +45,32 @@ struct Map {
 		_thres(thres),
 		_start(start),
 		_mode(mode),
-		_actions(create_actions((mode == MODE::FORWARD) ? 1 : -1))
+		_actions(create_actions(
+				(mode == MODE::DIJK) ? 
+				0 
+				: 
+				((mode == MODE::FORWARD) ? 1 : -1)
+			)
+		)
 	{
+
+		update_gval(start, 0.0);
 		for (const auto& goal: concrete_goals) {
-			update_gval(
-				goal, 
-				(mode == MODE::FORWARD) ? BIG_GVAL : 1
-			);
 			_concrete_goals.insert(goal);
+			if (mode == MODE::FORWARD)
+				update_gval(goal, BIG_GVAL);
+			else if (mode == MODE::BACKWARD)
+				update_gval(goal, 1);
 
 		}
 		_legal_states.reserve(_actions.size() + 1);
-		create_dmap(_raw, _x_size, _y_size, _thres);
+
+		if (mode != MODE::DIJK)
+			create_dmap(_raw, _x_size, _y_size, _thres);
 	};
 
 	array<Action, 9> create_actions(int dt) {
-		assert(std::abs(dt) == 1);
+		assert(std::abs(dt) == 1 or dt == 0);
 		return {
 			Action{-1, -1, dt},
 			Action{-1, 0, dt},
@@ -75,6 +85,7 @@ struct Map {
 	}
 
 	void create_dmap(int* raw_map, int x_size, int y_size, int thresh) const {
+		assert(_mode != MODE::DIJK);
 		cv::Mat is_obstacle(y_size, x_size, CV_8UC1);
 		for (int y = 1; y <= y_size; ++y) {
 			for (int x = 1; x <= x_size; ++x) {
@@ -114,8 +125,13 @@ struct Map {
 	};
 
 	const vector<StateGvalPair>& successors(const State& cur) {
-		return (_mode == MODE::FORWARD) ? forwards_succ(cur) : backwards_succ(cur);
-	};
+		if (_mode == MODE::FORWARD or _mode == MODE::DIJK) {
+			return forwards_succ(cur);
+		}
+		else  {
+			return backwards_succ(cur);
+		}
+};
 
 	const vector<StateGvalPair>& forwards_succ(const State& cur)  {
 		_legal_states.clear();
