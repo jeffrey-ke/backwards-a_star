@@ -72,6 +72,10 @@ struct DijkstraHeuristic: public Heuristic {
 				}
 			}
 		}
+		for (const auto& g : concrete_goals) {
+			assert(_map.get_gval(State{g.x, g.y, 0}) < Map::BIG_GVAL);
+		}
+		assert(_map.get_gval(State{174, 99, 0}) < Map::BIG_GVAL);
 	}
 	void insert_update(Heap& unvisited, const State& s, double dist){
 		auto iter = _state_handle_index.find(s);
@@ -95,11 +99,13 @@ struct DijkstraHeuristic: public Heuristic {
 		if (state == Map::IMAGINARY_GOAL) {
 			return 0;
 		}
+		auto steps = _map.get_steps(State{state.x, state.y, 0});
+		if (steps > state.t) {
+			return Map::BIG_GVAL;
+		}
 		auto dist = _map.get_gval(State{state.x, state.y, 0});
 		assert (dist < Map::BIG_GVAL);
-		if (dist > state.t) 
-			return Map::BIG_GVAL;
-		return _weight * dist;
+		return _weight * (dist) + state.t;
 	}
 };
 struct DistanceHeuristic: public Heuristic {
