@@ -11,7 +11,7 @@
 #define	MIN(A, B)	((A) < (B) ? (A) : (B))
 #endif
 
-enum class MODE {BACKWARD, FORWARD};
+enum class MODE {BACKWARD, FORWARD, DIJK};
 // Declare the plan function
 void planner(
     int* map,

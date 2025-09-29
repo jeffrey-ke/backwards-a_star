@@ -65,6 +65,7 @@ State get_next(deque<State>& soln, MODE a_star_mode) {
 	}
 	return next_state;
 }
+
 void planner(
 	int* raw_map,
 	int collision_thresh,
@@ -92,18 +93,15 @@ void planner(
 	OpenList open;
 	unordered_set<State, State::Hasher> closed;
 
-
 	const State robot_init{robotposeX, robotposeY, curr_time};
 	const vector<State> concrete_goals = helper::parse_goals(target_traj, target_steps, targetposeX, targetposeY, curr_time);
 
-	State goal{robot_init};
 	State start{Map::IMAGINARY_GOAL};
+	State goal{robot_init};
 
 	Map map{raw_map, x_size, y_size, collision_thresh, concrete_goals, start, A_STAR_MODE};
-	OctileHeuristic octile({goal}, 9000000.0, 9000, A_STAR_MODE);
-	// WallHeuristic wall(map, 8000);
-	SumHeuristic heuristic(octile);
-	map.update_gval(start, 0.0);
+	DijkstraHeuristic heuristic(raw_map, x_size, y_size, collision_thresh, concrete_goals, goal, 100000);
+	// TODO: breakpoint here
 	open.insert_update(start, 0.0, heuristic);
 
 	State expanded{};
