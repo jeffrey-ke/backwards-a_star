@@ -89,7 +89,7 @@ void planner(
 		action_ptr[1] = y;
 		return;
 	}
-	assert(curr_time == 0);
+	// assert(curr_time == 0);
 	OpenList open;
 	unordered_set<State, State::Hasher> closed;
 
@@ -100,7 +100,7 @@ void planner(
 	State goal{robot_init};
 
 	Map map{raw_map, x_size, y_size, collision_thresh, concrete_goals, start, A_STAR_MODE};
-	DijkstraHeuristic heuristic(raw_map, x_size, y_size, collision_thresh, concrete_goals, goal, 100000);
+	DijkstraHeuristic heuristic(raw_map, x_size, y_size, collision_thresh, concrete_goals, goal, 100000, target_steps - 5);
 	// TODO: breakpoint here
 	open.insert_update(start, 0.0, heuristic);
 

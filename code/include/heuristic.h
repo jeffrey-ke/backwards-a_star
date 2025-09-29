@@ -12,6 +12,7 @@
 #include <set>
 #include <utility>
 #include <algorithm>
+#include <iostream>
 
 #include <boost/heap/d_ary_heap.hpp>
 #include <variant>
@@ -24,7 +25,7 @@
 
 using std::vector;
 using std::unordered_map;
-using std::pair;
+using std::tuple;
 struct Heuristic {
 	// using inheritance
 	virtual double operator() (const State& state) const = 0;
@@ -32,14 +33,14 @@ struct Heuristic {
 };
 //
 struct DijkstraHeuristic: public Heuristic {
-	using StateDistance = pair<State, double>;
+	using StateDistanceStep = tuple<State, double, int>;
 	struct StateDistanceGT {
-		bool operator() (const StateDistance& lhs, const StateDistance& rhs) const {
-			return lhs.second > rhs.second;
+		bool operator() (const StateDistanceStep& lhs, const StateDistanceStep& rhs) const {
+			return std::get<1>(lhs) > std::get<1>(rhs);
 		}
 	};
 	using Heap = boost::heap::d_ary_heap<
-		StateDistance,
+		StateDistanceStep,
 		boost::heap::arity<4>,
 		boost::heap::compare<StateDistanceGT>,
 		boost::heap::mutable_<true>
@@ -53,34 +54,40 @@ struct DijkstraHeuristic: public Heuristic {
 	StateSet  _visited;
 	unordered_map<State, Heap::handle_type, State::Hasher> _state_handle_index;
 	int _weight;
+	int _max_path_len;
 
-	DijkstraHeuristic(int* raw_map, int x_size, int y_size, int thres, const vector<State>& concrete_goals, const State& src, int weight): 
+	DijkstraHeuristic(int* raw_map, int x_size, int y_size, int thres, const vector<State>& concrete_goals, const State& src, int weight, int max_path_len): 
 		_src(src),
 		_map(raw_map, x_size, y_size, thres, concrete_goals, src, MODE::DIJK),
-		_weight(weight)
+		_weight(weight),
+		_max_path_len(max_path_len)
 		{
-		auto handle = _unvisited.push({src, 0.0});
+		auto handle = _unvisited.push({src, 0.0, 0});
 		
 		while (_unvisited.size() > 0) {
-			auto [cur_state, cost] = _unvisited.top();
+			auto [cur_state, cost, pathlen] = _unvisited.top();
 			_unvisited.pop();
 			_visited.insert(cur_state);
+			if (pathlen > max_path_len)
+				continue;
+
 			auto neighbors = _map.successors(cur_state);
 			for (const auto& [n, dist] : neighbors) {
 				if (_visited.find(n) == _visited.end()) {
-					insert_update(_unvisited, n, dist);
+					insert_update(_unvisited, n, dist, pathlen + 1);
 				}
 			}
 		}
 		for (const auto& g : concrete_goals) {
-			assert(_map.get_gval(State{g.x, g.y, 0}) < Map::BIG_GVAL);
+			// assert(_map.get_gval(State{g.x, g.y, 0}) < Map::BIG_GVAL);
+			if (_visited.find(g) == _visited.end())
+				std::cout << "Dijkstra Warning! Goal: " << g.x << ", " << g.y << ", " << g.t << " not found!" << std::endl;
 		}
-		assert(_map.get_gval(State{174, 99, 0}) < Map::BIG_GVAL);
 	}
-	void insert_update(Heap& unvisited, const State& s, double dist){
+	void insert_update(Heap& unvisited, const State& s, double dist, int pathlen){
 		auto iter = _state_handle_index.find(s);
 		if (iter == _state_handle_index.end()) {
-			auto handle = unvisited.push(StateDistance{s, dist});
+			auto handle = unvisited.push(StateDistanceStep{s, dist, pathlen});
 			_state_handle_index.emplace(
 				std::piecewise_construct,
 				std::forward_as_tuple(s.x, s.y, s.t),
@@ -89,9 +96,9 @@ struct DijkstraHeuristic: public Heuristic {
 		}
 		else {
 			auto handle = iter->second;
-			auto [state, old_dist] = *handle;
+			auto [state, old_dist, old_pathlen] = *handle;
 			if (dist < old_dist) {
-				unvisited.increase(handle, StateDistance{state, dist});
+				unvisited.increase(handle, StateDistanceStep{state, dist, pathlen});
 			}
 		}
 	}
@@ -104,7 +111,7 @@ struct DijkstraHeuristic: public Heuristic {
 			return Map::BIG_GVAL;
 		}
 		auto dist = _map.get_gval(State{state.x, state.y, 0});
-		assert (dist < Map::BIG_GVAL);
+		// assert (dist < Map::BIG_GVAL);
 		return _weight * (dist) + state.t;
 	}
 };
