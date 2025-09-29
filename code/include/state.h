@@ -40,12 +40,12 @@ struct State{
 		}
 	}
 	struct Hasher {
-		int operator() (const State& s) const{
+		size_t operator() (const State& s) const{
 			size_t seed{};
 			boost::hash_combine(seed, s.x);
 			boost::hash_combine(seed, s.y);
 			boost::hash_combine(seed, s.t);
-			return static_cast<int>(seed);
+			return seed;
 		};
 	};
 };
