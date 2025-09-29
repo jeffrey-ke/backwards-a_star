@@ -12,7 +12,7 @@ struct Action {
 };
 struct State{
 	int x,y,t;
-	State() = default;
+	State(): x(0), y(0), t(0) {};
 	State(int _x, int _y, int _t): x(_x), y(_y), t(_t){};
 	bool operator==(const State& rhs) const {
 		return (
