@@ -23,7 +23,7 @@ elif [[ $1 == p ]]; then
 	if [[ $# -lt 2 ]]; then
 		echo "Provide a map!"
 	else
-		./run_test $2
+		./run_test $2.txt
 	fi
 fi
 
