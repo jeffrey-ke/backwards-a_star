@@ -29,6 +29,7 @@ using std::tuple;
 struct Heuristic {
 	// using inheritance
 	virtual double operator() (const State& state) const = 0;
+	virtual ~Heuristic() = default;   // <-- important
 
 };
 //
@@ -106,11 +107,14 @@ struct DijkstraHeuristic: public Heuristic {
 		if (state == Map::IMAGINARY_GOAL) {
 			return 0;
 		}
-		auto steps = _map.get_steps(State{state.x, state.y, 0});
-		if (steps > state.t) {
+		// std::cout << state << std::endl;
+		auto steps = _map.get_steps(State{state.x, state.y, _src.t});
+		// std::cout << "steps: " << steps << std::endl;
+		if (steps > (state.t - _src.t)) {
 			return Map::BIG_GVAL;
 		}
-		auto dist = _map.get_gval(State{state.x, state.y, 0});
+		auto dist = _map.get_gval(State{state.x, state.y, _src.t});
+		// std::cout << "dist: " << dist << std::endl;
 		// assert (dist < Map::BIG_GVAL);
 		return _weight * (dist) + state.t;
 	}
