@@ -1,7 +1,9 @@
 #include <cassert>
+#include <thread>
 #include <vector>
 #include <unordered_set>
 #include <deque>
+#include <chrono>
 
 #include <boost/functional/hash.hpp>
 
@@ -13,6 +15,8 @@
 #include "../include/helper.h"
 
 #define NUMOFDIRS 8
+using namespace std::chrono;
+using namespace std::chrono_literals;
 using std::unordered_set;
 using std::vector;
 using std::deque;
@@ -89,21 +93,21 @@ void planner(
 		action_ptr[1] = y;
 		return;
 	}
-	assert(curr_time == 0);
+	auto time_budget = 40s;
+	auto time_start = steady_clock::now();
 	OpenList open;
 	unordered_set<State, State::Hasher> closed;
 
-	const State robot_init{robotposeX, robotposeY, curr_time};
-	const vector<State> concrete_goals = helper::parse_goals(target_traj, target_steps, targetposeX, targetposeY, curr_time);
+	const State robot_init{robotposeX, robotposeY, static_cast<int>(time_budget.count())};
+	vector<State> concrete_goals = helper::parse_goals(target_traj, target_steps, targetposeX, targetposeY, curr_time);
 
 	State start{Map::IMAGINARY_GOAL};
 	State goal{robot_init};
 
-	Map map{raw_map, x_size, y_size, collision_thresh, concrete_goals, start, A_STAR_MODE};
-	DijkstraHeuristic heuristic(raw_map, x_size, y_size, collision_thresh, concrete_goals, goal, 100000, target_steps - 20);
-	// TODO: breakpoint here
+	DijkstraHeuristic heuristic(raw_map, x_size, y_size, collision_thresh, concrete_goals, goal, 100000, target_steps);
 	open.insert_update(start, 0.0, heuristic);
 
+	Map map{raw_map, x_size, y_size, collision_thresh, concrete_goals, start, A_STAR_MODE};
 	State expanded{};
 	while (true) {
 		expanded = open.pop();
@@ -113,6 +117,9 @@ void planner(
 		expand_state(open, expanded, closed, map, heuristic);
 	}
 	soln = backtrack(expanded, start, map);
+	auto time_now = steady_clock::now();
+	auto time_left = time_budget - duration_cast<seconds>(time_now - time_start);
+	std::this_thread::sleep_until(time_now + time_left);
 	const auto& [next_x, next_y, next_t] = get_next(soln, A_STAR_MODE);
 	action_ptr[0] = next_x;
 	action_ptr[1] = next_y;

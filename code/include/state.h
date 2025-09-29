@@ -1,5 +1,6 @@
 #ifndef STATE_H
 #define STATE_H
+#include <ostream>
 #include <utility>
 #include <cstddef>
 #include <limits>
@@ -51,6 +52,9 @@ struct State{
 
 inline State operator+(const State& lhs, const Action& rhs) {
 	return State{lhs.x + rhs.dx, lhs.y + rhs.dy, lhs.t  + rhs.dt};
+};
+inline std::ostream& operator<<(std::ostream& os, const State& s) {
+	return os << "(" << s.x << ", " << s.y << ", " << s.t << ")";
 };
 
 #endif
