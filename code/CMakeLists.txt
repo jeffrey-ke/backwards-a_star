@@ -11,7 +11,11 @@ add_executable(run_test
 target_compile_options(run_test
 	PRIVATE
 	$<$<CONFIG:Release>:-O3>
-	$<$<CONFIG:Debug>:-g>
+	$<$<CONFIG:Debug>:-g -O0 -fsanitize=address,undefined>
+)
+target_link_options(run_test
+	PRIVATE
+	$<$<CONFIG:Debug>:-fsanitize=address,undefined>
 )
 # Have the executable depend on the header files.
 target_include_directories(run_test PRIVATE ${CMAKE_SOURCE_DIR}/include)
