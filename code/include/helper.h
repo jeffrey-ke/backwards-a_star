@@ -10,7 +10,7 @@ inline Target parse_goals(int* target_traj, int target_steps, int target_poseX, 
 	Target target;
 	target.resize(target_steps);
 	for (int time_step = 0; time_step < target_steps; ++time_step) {
-		target.at(time_step) = State{target_traj[time_step], target_traj[time_step + target_steps], time_step};
+		target.at(time_step) = State{target_traj[time_step], target_traj[time_step + target_steps], time_step - 1};
 	}
 	return target;
 }

@@ -45,9 +45,7 @@ deque<State> backtrack(const State& goal, const State& start, Map& map) {
 			soln.push_back(next_state); //copies anyway, don't need to make next_state a copy.
 		cur = next_state;
 	}
-	assert(!soln.empty() && "Solution should not be empty before pop");
-	soln.pop_front(); // the front is always the goal: for forward, it's the imaginary goal, for backwards, it's the starting position.
-	// in either case, this doesn't belong here
+	assert(!soln.empty() && "why empty");
 	return soln;
 }
 
@@ -95,12 +93,12 @@ void planner(
 		action_ptr[1] = y;
 		return;
 	}
-	auto time_budget = 40s;
+	auto time_budget = seconds(x_size / 50);
 	auto time_start = steady_clock::now();
 	OpenList open;
 	unordered_set<State, State::Hasher> closed;
 
-	const State robot_init{robotposeX, robotposeY, static_cast<int>(time_budget.count())};
+	const State robot_init{robotposeX, robotposeY, static_cast<int>(time_budget.count()) - 1};
 	vector<State> concrete_goals = helper::parse_goals(target_traj, target_steps, targetposeX, targetposeY, curr_time);
 
 	State start{Map::IMAGINARY_GOAL};
