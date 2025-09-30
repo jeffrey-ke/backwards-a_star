@@ -107,9 +107,7 @@ struct DijkstraHeuristic: public Heuristic {
 		if (state == Map::IMAGINARY_GOAL) {
 			return 0;
 		}
-		// std::cout << state << std::endl;
 		auto steps = _map.get_steps(State{state.x, state.y, _src.t});
-		// std::cout << "steps: " << steps << std::endl;
 		if (steps > (state.t - _src.t)) {
 			return Map::BIG_GVAL;
 		}
