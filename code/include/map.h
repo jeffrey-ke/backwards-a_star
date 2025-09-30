@@ -26,7 +26,7 @@ struct Map {
 
 	static const State IMAGINARY_GOAL;
 	static constexpr double BIG_GVAL = std::numeric_limits<double>::infinity();
-	static constexpr int MAX_STEP = std::numeric_limits<int>::infinity();
+	static constexpr int MAX_STEP = -1;
 
 	const array<Action, 9> _actions;
 
