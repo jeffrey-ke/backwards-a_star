@@ -114,7 +114,7 @@ struct DijkstraHeuristic: public Heuristic {
 		auto dist = _map.get_gval(State{state.x, state.y, _src.t});
 		// std::cout << "dist: " << dist << std::endl;
 		// assert (dist < Map::BIG_GVAL);
-		return _weight * (dist) + state.t;
+		return _weight * (dist + state.t);
 	}
 };
 struct DistanceHeuristic: public Heuristic {
