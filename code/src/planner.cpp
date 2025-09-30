@@ -31,7 +31,7 @@ deque<State> backtrack(const State& goal, const State& start, Map& map) {
 	while (cur != start) {
 		const vector<Map::StateGvalPair>& preds = map.predecessors(cur);
 		auto min_gval = Map::BIG_GVAL;
-		State next_state = cur; // Initialize to current state
+		State next_state = cur;
 		for (const auto& [pred, gval] : preds) {
 			if (
 				(gval < min_gval)
@@ -40,9 +40,9 @@ deque<State> backtrack(const State& goal, const State& start, Map& map) {
 				next_state = pred;
 			}
 		}
-		assert(next_state != cur && "No valid predecessor found");
+		assert(next_state != cur && "huh");
 		if (next_state != Map::IMAGINARY_GOAL)
-			soln.push_back(next_state); //copies anyway, don't need to make next_state a copy.
+			soln.push_back(next_state); 
 		cur = next_state;
 	}
 	assert(!soln.empty() && "why empty");
