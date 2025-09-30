@@ -4,6 +4,7 @@
  *
  *=================================================================*/
 #include <math.h>
+#include <cassert>
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -135,7 +136,8 @@ int main(int argc, char *argv[])
     int pathcost = 0;
 
     std::string outputDir = OUTPUT_DIR;
-    std::string outputFilePath = outputDir + "/robot_trajectory.txt";
+    std::string map_name{argv[1]};
+    std::string outputFilePath = outputDir + "/" + map_name.substr(0, map_name.rfind(".")) + "traj.txt";
     std::ofstream output_file(outputFilePath);
     std::cout << "Writing robot trajectory to: " << outputFilePath << std::endl;
     if (!output_file.is_open()) {
@@ -198,6 +200,7 @@ int main(int argc, char *argv[])
         float thresh = 0.5;
         targetposeX = target_traj[curr_time];
         targetposeY = target_traj[curr_time + target_steps];
+        std::cout << targetposeX << ", " << targetposeY << std::endl;
         if (abs(robotposeX - targetposeX) <= thresh && abs(robotposeY-targetposeY) <= thresh)
         {
             caught = true;
