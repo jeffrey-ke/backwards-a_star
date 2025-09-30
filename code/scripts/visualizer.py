@@ -1,4 +1,5 @@
 import numpy as np 
+from pathlib import Path
 import matplotlib.pyplot as plt 
 from matplotlib.animation import FuncAnimation
 
@@ -49,8 +50,9 @@ if __name__ == "__main__":
         sys.exit(1)
     
     x_size, y_size, collision_threshold, robotX, robotY, target_trajectory, costmap = parse_mapfile(sys.argv[1])
-
-    robot_trajectory = parse_robot_trajectory_file('../output/robot_trajectory.txt')
+    print(sys.argv[1])
+    map_name = Path(sys.argv[1]).stem.split(".")[0]
+    robot_trajectory = parse_robot_trajectory_file(f'../output/{map_name}traj.txt')
 
     fig, ax = plt.subplots()
     
