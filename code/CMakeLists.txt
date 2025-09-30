@@ -10,7 +10,7 @@ add_executable(run_test
 
 target_compile_options(run_test
 	PRIVATE
-	$<$<CONFIG:Release>:-O3>
+	$<$<CONFIG:Release>:-O0>
 	$<$<CONFIG:Debug>:-g -O0 -fsanitize=address,undefined>
 )
 target_link_options(run_test
