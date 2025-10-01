@@ -46,16 +46,19 @@ struct OpenList {
 		auto hval = h(state);
 		if (iter == _state_handle_map.end()) {
 			auto handle = _min_heap.push(StateGvalHval{state, gval, hval});
+
 			_state_handle_map.emplace(
 				std::piecewise_construct,
 				std::forward_as_tuple(state.x, state.y, state.t),
 				std::forward_as_tuple(handle)
 			);
+
 		}
 		else {
 			auto handle = iter->second;
 			auto [s, old_g, old_h] = *handle;
 			assert(hval == old_h);
+
 			if (gval < old_g) { //it's priority, not numerical value
 				_min_heap.increase(handle, StateGvalHval{state, gval, hval});
 				// this node now has higher priority!
@@ -64,6 +67,7 @@ struct OpenList {
 	};
 
 	State pop() {
+
 		auto [state, g, h] = _min_heap.top();
 		_min_heap.pop();
 		_state_handle_map.erase(state);
